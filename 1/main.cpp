@@ -1,5 +1,6 @@
 #include <iostream>
 #include <functional>
+#include <fstream>
 #include <Eigen/Eigen>
 #include <Eigen/Dense>
 
@@ -89,6 +90,57 @@ public:
 
 		return cells;
 	}
+};
+
+class NonUniformGrid : public Grid 
+{
+public:
+	NonUniformGrid(double c) : c(c) {}
+
+	Cells makeCells(const Field& field, 
+	                double startx, double starty,
+	                double sizex, double sizey,
+	                int isizex, int isizey) {
+		Cells cells;
+		cells.reserve(isizex * isizey);
+		// [строка][столбец]
+		std::vector<std::vector<int>> grid(isizey, std::vector<int>(isizex, -1));
+
+		double x = startx, y = starty;
+		double hx, hy;
+		if (std::fabs(c - 1) > 0.00001) {
+			hx = sizex * (1.0-c)/(1-pow(c, isizex));
+			hy = sizey * (1.0-c)/(1-pow(c, isizey));
+		} else {
+			// Это равномерная сетка, что ты здесь забыл?
+			hx = sizex/(isizex-1); 
+			hy = sizey/(isizey-1);
+		}
+		double oldhx = hx;
+		int k = 0;
+		for (int i = 0; i < isizey; ++i, y += hy, hy *= c) {
+			x = startx;
+			hx = oldhx;
+			for (int j = 0; j < isizex; ++j, x += hx, hx *= c) {		
+				if (field.isPointInside(x, y)) {
+					grid[i][j] = k;
+					cells.push_back({k, false, 0, x, y,
+						nullptr,
+						(i != 0) ? &cells[grid[i-1][j]] : nullptr, 
+						(j != 0) ? &cells[grid[i][j-1]] : nullptr,
+						nullptr,
+					});
+					k++;
+					if (i != 0) cells[grid[i-1][j]].up = &cells.back();
+					if (j != 0) cells[grid[i][j-1]].right = &cells.back();
+				}
+			}
+		}
+
+		return cells;
+	}
+private:
+	double c;
 };
 
 void fillWithFunction(Cells& cells, const Function2D& f) {
@@ -204,34 +256,42 @@ void setCells(Cells& cells, const Vector& answer) {
 #endif
 
 int main() {
-	ShField field(1, 1);
-	UniformGrid grid;
-	int size = 30;
-	auto cells_answer = grid.makeCells(field, 0, 0, 1, 1, size, size);
-	auto cells_question = grid.makeCells(field, 0, 0, 1, 1, size, size);
-	auto f = [] (double x, double y) -> double { return exp(x*y + x*x*y + 3); };
-	//(2 x^3 + x^4 + 4 x y^2 + y (2 + y) + x^2 (1 + 4 y^2))
-	auto rightPart = [] (double x, double y) -> double { return exp(x*y + x*x*y + 3)*(2*x*x*x + x*x*x*x + 4*x*y*y + y*(2+y) + x*x*(1+4*y*y)); };
-	/*auto f = [] (double x, double y) -> double { return exp(x*y); };
-	auto rightPart = [] (double x, double y) -> double { return exp(x*y)*(x*x+y*y); };*/
-	/*auto f = [] (double x, double y) -> double { return x*x*x*x + y*y*y*y; };
-	auto rightPart = [] (double x, double y) -> double { return 12*(x*x+y*y); };*/
-	/*auto f = [] (double x, double y) -> double { return x*x*x + y*y*y; };
-	auto rightPart = [] (double x, double y) -> double { return 6*(x+y); };*/
-	/*auto f = [] (double x, double y) -> double { return x*x + y*y; };
-	auto rightPart = [] (double x, double y) -> double { return 4; };*/
-	/*auto f = [] (double x, double y) -> double { return 2*x + y; };
-	auto rightPart = [] (double x, double y) -> double { return 0; };*/
-	fillWithFunction(cells_answer, f);
-	fillBoundaryConditions1(cells_question, f);
-	auto slae = makeSLAE(cells_question, rightPart);
-	//debug(slae.first);
-	//debug(slae.second);
-	auto answer = solveSLAE(slae); //debug(answer);
-	setCells(cells_question, answer);
-	double difference = calcDifference(cells_answer, cells_question);
-	std::cout << "Precision of SLAE solve: " << (slae.first*answer - slae.second).norm() << std::endl;
-	std::cout << "Difference: " << difference << std::endl;
+	std::ofstream fout("a.txt");
+
+	for (int i = 6; i <= 300; i+=2) {
+		if (i % 10 == 0) std::cout << i << std::endl;
+		ShField field(1, 1);
+		//UniformGrid grid;
+		NonUniformGrid grid(i/100.0);
+		int size = 15;
+		auto cells_answer = grid.makeCells(field, 0, 0, 1, 1, size, size);
+		auto cells_question = grid.makeCells(field, 0, 0, 1, 1, size, size);
+		auto f = [] (double x, double y) -> double { return exp(x*y + x*x*y + 3); };
+		auto rightPart = [] (double x, double y) -> double { return exp(x*y + x*x*y + 3)*(2*x*x*x + x*x*x*x + 4*x*y*y + y*(2+y) + x*x*(1+4*y*y)); };
+		/*auto f = [] (double x, double y) -> double { return exp(x*y); };
+		auto rightPart = [] (double x, double y) -> double { return exp(x*y)*(x*x+y*y); };*/
+		/*auto f = [] (double x, double y) -> double { return x*x*x*x + y*y*y*y; };
+		auto rightPart = [] (double x, double y) -> double { return 12*(x*x+y*y); };*/
+		/*auto f = [] (double x, double y) -> double { return x*x*x + y*y*y; };
+		auto rightPart = [] (double x, double y) -> double { return 6*(x+y); };*/
+		/*auto f = [] (double x, double y) -> double { return x*x + y*y; };
+		auto rightPart = [] (double x, double y) -> double { return 4; };*/
+		/*auto f = [] (double x, double y) -> double { return 2*x + y; };
+		auto rightPart = [] (double x, double y) -> double { return 0; };*/
+		fillWithFunction(cells_answer, f);
+		fillBoundaryConditions1(cells_question, f);
+		auto slae = makeSLAE(cells_question, rightPart);
+		//debug(slae.first);
+		//debug(slae.second);
+		auto answer = solveSLAE(slae); //debug(answer);
+		setCells(cells_question, answer);
+		double difference = calcDifference(cells_answer, cells_question);
+		//std::cout << "Precision of SLAE solve: " << (slae.first*answer - slae.second).norm() << std::endl;
+		//std::cout << "Difference: " << difference << std::endl;
+		fout << i/100.0 << "\t" << difference << std::endl;
+	}
+
+	fout.close();
 
 	system("pause");
 }
