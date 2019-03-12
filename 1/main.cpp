@@ -28,10 +28,15 @@ struct Cell
 			double value;
 		} first;
 		struct {
+			Cell* cell_around;
 			double value;
+			double h;
 		} second;
 		struct {
-			double c1, c2;
+			Cell* cell_around;
+			double value;
+			double h;
+			double c1;
 		} third;
 	} conditionValue;
 
@@ -98,42 +103,6 @@ public:
 	                        int isizex, int isizey) = 0;
 };
 
-class UniformGrid : public Grid
-{
-public:
-	Cells makeCells(const Field& field, 
-	                double startx, double starty,
-	                double sizex, double sizey,
-	                int isizex, int isizey) {
-		Cells cells;
-		cells.reserve(isizex * isizey);
-		// [строка][столбец]
-		std::vector<std::vector<int>> grid(isizey, std::vector<int>(isizex, -1));
-		double x = startx, y = starty;
-		double hx = sizex/(isizex-1), hy = sizey/(isizey-1);
-		int k = 0;
-		for (int i = 0; i < isizey; ++i, y += hy) {
-			x = startx;
-			for (int j = 0; j < isizex; ++j, x += hx) {		
-				if (field.isPointInside(x, y)) {
-					grid[i][j] = k;
-					cells.push_back({k, Cell::INNER, 0, 0, x, y,
-						nullptr,
-						(i != 0) ? &cells[grid[i-1][j]] : nullptr, 
-						(j != 0) ? &cells[grid[i][j-1]] : nullptr,
-						nullptr,
-					});
-					k++;
-					if (i != 0) cells[grid[i-1][j]].up = &cells.back();
-					if (j != 0) cells[grid[i][j-1]].right = &cells.back();
-				}
-			}
-		}
-
-		return cells;
-	}
-};
-
 class NonUniformGrid : public Grid 
 {
 public:
@@ -185,17 +154,33 @@ private:
 	double c;
 };
 
+class UniformGrid : public Grid
+{
+public:
+	UniformGrid() : grid(1.0) {
+	}
+
+	Cells makeCells(const Field& field, 
+	                double startx, double starty,
+	                double sizex, double sizey,
+	                int isizex, int isizey) {
+		return grid.makeCells(field, startx, starty, sizex, sizey, isizex, isizey);
+	}
+private:
+	NonUniformGrid grid;
+};
+
 Function2D calcFirstDerivativeX(const Function2D& f) {
 	return [f] (double x, double y) -> double {
-		const double eps = 1e-9;
-		return (f(x + eps, y) - f(x, y))/eps;
+		const double h = 0.0001;
+		return (-f(x+2*h, y)+8*f(x+h, y)-8*f(x-h, y)+f(x-2*h, y))/(12*h);
 	};
 }
 
 Function2D calcFirstDerivativeY(const Function2D& f) {
 	return [f] (double x, double y) -> double {
-		const double eps = 1e-9;
-		return (f(x, y + eps) - f(x, y))/eps;
+		const double h = 0.0001;
+		return (-f(x, y+2*h)+8*f(x, y+h)-8*f(x, y-h)+f(x, y-2*h))/(12*h);
 	};
 }
 
@@ -238,23 +223,92 @@ void fillBoundaryConditions1(Cells& cells, const Function2D& f) {
 }
 
 void fillBoundaryConditions2(Cells& cells, const Function2D& f) {
+	auto fx = calcFirstDerivativeX(f);
+	auto fy = calcFirstDerivativeY(f);
+	int isFirst = 2;
 	for (auto& i : cells) {
-		if (i.up == nullptr)
 		if (i.up == nullptr || i.down == nullptr || i.left == nullptr || i.right == nullptr) {
-			i.conditionType = Cell::SECOND;
-			i.conditionValue.second.value = f(i.x, i.y);
+			if (isFirst || i.left == nullptr && i.right == nullptr || i.up == nullptr && i.down == nullptr) {
+				// Тут уже ничего не сделаешь, потому что это палка, у которой нет соседей, чтобы можно было сделать краевые условия с производной
+				i.conditionType = Cell::FIRST;
+				i.conditionValue.first.value = f(i.x, i.y);
+				isFirst--;
+			} else {
+				i.conditionType = Cell::SECOND;
+				double fxv = fx(i.x, i.y);
+				double fyv = fy(i.x, i.y);
+				
+				Cell* cell_around;
+				double& result = i.conditionValue.second.value;
+				if (i.left == nullptr) {
+					result = -fxv;
+					cell_around = i.right;
+				} else if (i.right == nullptr) {
+					result = fxv;
+					cell_around = i.left;
+				} else if (i.up == nullptr) {
+					result = fyv;
+					cell_around = i.down;
+				} else if (i.down == nullptr) {
+					result = -fyv;
+					cell_around = i.up;
+				} else {
+					throw std::exception("This is inner cell!");
+				}
+				i.conditionValue.second.cell_around = cell_around;
+
+				double hx = std::fabs(cell_around->x - i.x);
+				double hy = std::fabs(cell_around->y - i.y);
+				double h = std::max(hx, hy);
+				i.conditionValue.second.h = h;
+			}
 		}
 	}
 }
 
-/*void fillBoundaryConditions3(Cells& cells, const Function2D& f, const Function2D& fd, double c1) {
+void fillBoundaryConditions3(Cells& cells, const Function2D& f, double c1) {
+	auto fx = calcFirstDerivativeX(f);
+	auto fy = calcFirstDerivativeY(f);
 	for (auto& i : cells) {
 		if (i.up == nullptr || i.down == nullptr || i.left == nullptr || i.right == nullptr) {
-			i.conditionType = Cell::SECOND;
-			i.conditionValue.value = fd(i.x, i.y);
+			if (i.left == nullptr && i.right == nullptr || i.up == nullptr && i.down == nullptr) {
+				// Тут уже ничего не сделаешь, потому что это палка, у которой нет соседей, чтобы можно было сделать краевые условия с производной
+				i.conditionType = Cell::FIRST;
+				i.conditionValue.first.value = f(i.x, i.y);
+			} else {
+				i.conditionType = Cell::THIRD;
+				double fxv = fx(i.x, i.y);
+				double fyv = fy(i.x, i.y);
+
+				Cell* cell_around;
+				double& result = i.conditionValue.third.value;
+				if (i.left == nullptr) {
+					result = -fxv;
+					cell_around = i.right;
+				} else if (i.right == nullptr) {
+					result = fxv;
+					cell_around = i.left;
+				} else if (i.up == nullptr) {
+					result = fyv;
+					cell_around = i.down;
+				} else if (i.down == nullptr) {
+					result = -fyv;
+					cell_around = i.up;
+				} else {
+					throw std::exception("This is inner cell!");
+				}
+				result += f(i.x, i.y)*c1;
+				i.conditionValue.third.cell_around = cell_around;
+
+				double hx = std::fabs(cell_around->x - i.x);
+				double hy = std::fabs(cell_around->y - i.y);
+				double h = std::max(hx, hy);
+				i.conditionValue.third.h = h;
+				i.conditionValue.third.c1 = c1;
+			}
 		}
 	}
-}*/
+}
 
 double calcDifference(const Cells& a, const Cells& b) {
 	if (a.size() != b.size())
@@ -319,20 +373,20 @@ std::pair<Matrix, Vector> makeSLAE(const Cells& cells, const Function2D& rightPa
 				b[i] = cell.conditionValue.first.value;
 			} break;
 			case Cell::SECOND: {
-				if (cell.left == nullptr) {
-
-				} else if (cell.right == nullptr) {
-
-				} else if (cell.up == nullptr) {
-
-				} else if (cell.down == nullptr) {
-
-				} else {
-					throw std::exception("This is inner cell!");
-				}
+				double h = cell.conditionValue.second.h;
+				pushLine(A, i, {
+					{cell.i, 1.0/h}, 
+					{cell.conditionValue.second.cell_around->i, -1.0/h}, 
+				});
+				b[i] = cell.conditionValue.second.value;
 			} break;
 			case Cell::THIRD: {
-
+				double h = cell.conditionValue.third.h;
+				pushLine(A, i, {
+					{cell.i, 1.0/h + cell.conditionValue.third.c1}, 
+					{cell.conditionValue.third.cell_around->i, -1.0/h}, 
+				});
+				b[i] = cell.conditionValue.second.value;
 			} break;
 		}
 	}
@@ -352,7 +406,7 @@ void setCells(Cells& cells, const Vector& answer) {
 		cells[i].value = answer(i);
 }
 
-void make_table_nonuniform_grid(const std::string& name, const Field& field, const Function2D& f, int size) {
+void make_table_nonuniform_grid(const std::string& name, const Field& field, const Function2D& f, int size, int boundaryCondition) {
 	auto rightPart = calcLaplacian(f);
 	std::ofstream fout(name);
 	fout << "c\tnorm" << std::endl;
@@ -361,7 +415,13 @@ void make_table_nonuniform_grid(const std::string& name, const Field& field, con
 		auto cells_answer = grid.makeCells(field, field.startx, field.starty, field.sizex, field.sizey, size, size);
 		auto cells_question = grid.makeCells(field, field.startx, field.starty, field.sizex, field.sizey, size, size);
 		fillWithFunction(cells_answer, f);
-		fillBoundaryConditions1(cells_question, f);
+		if (boundaryCondition == 1) {
+			fillBoundaryConditions1(cells_question, f);
+		} else if (boundaryCondition == 2) {
+			fillBoundaryConditions2(cells_question, f);
+		} else {
+			fillBoundaryConditions3(cells_question, f, 1);
+		}
 		auto slae = makeSLAE(cells_question, rightPart);
 		auto answer = solveSLAE(slae);
 		setCells(cells_question, answer);
@@ -374,7 +434,7 @@ void make_table_nonuniform_grid(const std::string& name, const Field& field, con
 	fout.close();
 }
 
-void make_table_size(const std::string& name, const Field& field, const Function2D& f) {
+void make_table_size(const std::string& name, const Field& field, const Function2D& f, int boundaryCondition) {
 	auto rightPart = calcLaplacian(f);
 	std::ofstream fout(name);
 	fout << "size\tnorm" << std::endl;
@@ -383,7 +443,13 @@ void make_table_size(const std::string& name, const Field& field, const Function
 		auto cells_answer = grid.makeCells(field, field.startx, field.starty, field.sizex, field.sizey, i, i);
 		auto cells_question = grid.makeCells(field, field.startx, field.starty, field.sizex, field.sizey, i, i);
 		fillWithFunction(cells_answer, f);
-		fillBoundaryConditions1(cells_question, f);
+		if (boundaryCondition == 1) {
+			fillBoundaryConditions1(cells_question, f);
+		} else if (boundaryCondition == 2) {
+			fillBoundaryConditions2(cells_question, f);
+		} else {
+			fillBoundaryConditions3(cells_question, f, 1);
+		}
 		auto slae = makeSLAE(cells_question, rightPart);
 		auto answer = solveSLAE(slae);
 		setCells(cells_question, answer);
@@ -406,8 +472,8 @@ int main() {
 	//auto f = [] (double x, double y) -> double { return x*x + y*y; };
 	//auto f = [] (double x, double y) -> double { return 2*x + y; };
 
-	//SquareField field(0, 0, 1, 1);
-	ShField field(0, 0, 1, 1);
+	SquareField field(0, 0, 1, 1);
+	//ShField field(0, 0, 1, 1);
 	//make_table_size("a.txt", field, f);
-	make_table_nonuniform_grid("a.txt", field, f, 14);
+	make_table_nonuniform_grid("a.txt", field, f, 14, 3);
 }
