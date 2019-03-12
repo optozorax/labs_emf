@@ -14,8 +14,26 @@ struct Cell
 {
 	int i;
 
-	bool isBorder;
-	//int conditionType; // 0 - первое, 1 - второе, 2 - третье
+	enum 
+	{
+		INNER, // Нет краевых условий
+		FIRST, // f(x, y) = value
+		SECOND,  // f'(x, y) = value
+		THIRD,  // f'(x, y) + c1 * f(x, y) + c2 = 0
+	}
+	conditionType; // краевое условие
+
+	union {
+		struct {
+			double value;
+		} first;
+		struct {
+			double value;
+		} second;
+		struct {
+			double c1, c2;
+		} third;
+	} conditionValue;
 
 	double value;
 	double x, y;
@@ -28,23 +46,47 @@ typedef std::vector<Cell> Cells;
 class Field
 {
 public:
+	Field(double startx, double starty, double sizex, double sizey) : sizex(sizex), sizey(sizey), startx(startx), starty(starty) {
+	}
+
 	virtual bool isPointInside(double x, double y) const = 0;
+
+	double sizex, sizey;
+	double startx, starty;
+};
+
+bool isInsideSquare(double x, double y, double sizex, double sizey, double startx, double starty) {
+	x -= startx;
+	y -= starty;
+	return x >= 0 && x <= sizex && y >= 0 && y <= sizey;
+}
+
+class SquareField : public Field
+{
+public:
+	SquareField(double startx, double starty, double sizex, double sizey) : Field(startx, starty, sizex, sizey) {
+	}
+	bool isPointInside(double x, double y) const {
+		if (isInsideSquare(x, y, sizex, sizey, startx, starty))
+			return true;
+		else
+			return false;
+	}
 };
 
 class ShField : public Field
 {
 public:
-	ShField(double sizex, double sizey) : sizex(sizex), sizey(sizey) {
+	ShField(double startx, double starty, double sizex, double sizey) : Field(startx, starty, sizex, sizey) {
 	}
 	bool isPointInside(double x, double y) const {
-		// TODOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
-		if (x >= 0 && x <= sizex && y >= 0 && y <= sizey)
+		if (isInsideSquare(x, y, sizex, sizey, startx, starty) && 
+		    !isInsideSquare(x, y, sizex * 0.2, sizey * 0.2, startx + sizex * 0.2, starty + sizey * 0.8) &&
+		    !isInsideSquare(x, y, sizex * 0.2, sizey * 0.2, startx + sizex * 0.6, starty + sizey * 0.8))
 			return true;
 		else
-			return true;
+			return false;
 	}
-private:
-	double sizex, sizey;
 };
 
 class Grid
@@ -75,7 +117,7 @@ public:
 			for (int j = 0; j < isizex; ++j, x += hx) {		
 				if (field.isPointInside(x, y)) {
 					grid[i][j] = k;
-					cells.push_back({k, false, 0, x, y,
+					cells.push_back({k, Cell::INNER, 0, 0, x, y,
 						nullptr,
 						(i != 0) ? &cells[grid[i-1][j]] : nullptr, 
 						(j != 0) ? &cells[grid[i][j-1]] : nullptr,
@@ -124,15 +166,15 @@ public:
 			for (int j = 0; j < isizex; ++j, x += hx, hx *= c) {		
 				if (field.isPointInside(x, y)) {
 					grid[i][j] = k;
-					cells.push_back({k, false, 0, x, y,
-						nullptr,
-						(i != 0) ? &cells[grid[i-1][j]] : nullptr, 
-						(j != 0) ? &cells[grid[i][j-1]] : nullptr,
-						nullptr,
-					});
+					cells.push_back({k, Cell::INNER, 0, 0, x, y,
+									nullptr,
+									(i != 0 && grid[i-1][j] != -1) ? &cells[grid[i-1][j]] : nullptr, 
+									(j != 0 && grid[i][j-1] != -1) ? &cells[grid[i][j-1]] : nullptr,
+									nullptr,
+									});
 					k++;
-					if (i != 0) cells[grid[i-1][j]].up = &cells.back();
-					if (j != 0) cells[grid[i][j-1]].right = &cells.back();
+					if (i != 0 && grid[i-1][j] != -1) cells[grid[i-1][j]].up = &cells.back();
+					if (j != 0 && grid[i][j-1] != -1) cells[grid[i][j-1]].right = &cells.back();
 				}
 			}
 		}
@@ -143,24 +185,76 @@ private:
 	double c;
 };
 
+Function2D calcFirstDerivativeX(const Function2D& f) {
+	return [f] (double x, double y) -> double {
+		const double eps = 1e-9;
+		return (f(x + eps, y) - f(x, y))/eps;
+	};
+}
+
+Function2D calcFirstDerivativeY(const Function2D& f) {
+	return [f] (double x, double y) -> double {
+		const double eps = 1e-9;
+		return (f(x, y + eps) - f(x, y))/eps;
+	};
+}
+
+Function2D calcSecondDerivativeX(const Function2D& f) {
+	return [f] (double x, double y) -> double {
+		const double h = 0.001;
+		return (-f(x+2*h, y) + 16*f(x+h, y) - 30*f(x, y) + 16*f(x-h, y) - f(x-2*h, y))/(12*h*h);
+	};
+}
+
+Function2D calcSecondDerivativeY(const Function2D& f) {
+	return [f] (double x, double y) -> double {
+		const double h = 0.001;
+		return (-f(x, y+2*h) + 16*f(x, y+h) - 30*f(x, y) + 16*f(x, y-h) - f(x, y-2*h))/(12*h*h);
+	};
+}
+
+Function2D calcLaplacian(const Function2D& f) {
+	auto fxx = calcSecondDerivativeX(f);
+	auto fyy = calcSecondDerivativeY(f);
+	return [fxx, fyy] (double x, double y) -> double {
+		return fxx(x, y) + fyy(x, y);
+	};
+}
+
 void fillWithFunction(Cells& cells, const Function2D& f) {
-	for (auto& i : cells)
+	for (auto& i : cells) {
 		i.value = f(i.x, i.y);
+	}
 }
 
 void fillBoundaryConditions1(Cells& cells, const Function2D& f) {
 	// Первые краевые условия
 	for (auto& i : cells) {
 		if (i.up == nullptr || i.down == nullptr || i.left == nullptr || i.right == nullptr) {
-			i.isBorder = true;
-			i.value = f(i.x, i.y);
+			i.conditionType = Cell::FIRST;
+			i.conditionValue.first.value = f(i.x, i.y);
 		}
 	}
 }
 
-void fillBoundaryConditions3(Cells& cells, const Function2D& f) {
-
+void fillBoundaryConditions2(Cells& cells, const Function2D& f) {
+	for (auto& i : cells) {
+		if (i.up == nullptr)
+		if (i.up == nullptr || i.down == nullptr || i.left == nullptr || i.right == nullptr) {
+			i.conditionType = Cell::SECOND;
+			i.conditionValue.second.value = f(i.x, i.y);
+		}
+	}
 }
+
+/*void fillBoundaryConditions3(Cells& cells, const Function2D& f, const Function2D& fd, double c1) {
+	for (auto& i : cells) {
+		if (i.up == nullptr || i.down == nullptr || i.left == nullptr || i.right == nullptr) {
+			i.conditionType = Cell::SECOND;
+			i.conditionValue.value = fd(i.x, i.y);
+		}
+	}
+}*/
 
 double calcDifference(const Cells& a, const Cells& b) {
 	if (a.size() != b.size())
@@ -204,33 +298,42 @@ std::pair<Matrix, Vector> makeSLAE(const Cells& cells, const Function2D& rightPa
 
 	for (int i = 0; i < cells.size(); ++i) {
 		const auto& cell = cells[i];
-		if (cell.isBorder) {
-			pushLine(A, i, {{cell.i, 1}});
-			b[i] = cell.value;
-		} else
-		/*if (cell.up == nullptr) {
-			
-		} else if (cell.down == nullptr) {
+		switch (cell.conditionType) {
+			case Cell::INNER: {
+				double uph = std::fabs(cell.up->y - cell.y);
+				double downh = std::fabs(cell.down->y - cell.y);
+				double lefth = std::fabs(cell.left->x - cell.x);
+				double righth = std::fabs(cell.right->x - cell.x);
+				pushLine(A, i, {
+					{cell.left->i, 2.0/(lefth*(righth + lefth))}, 
+					{cell.down->i, 2.0/(downh*(uph + downh))}, 
+					{cell.right->i, 2.0/(righth*(righth + lefth))}, 
+					{cell.up->i, 2.0/(uph*(uph + downh))}, 
+					{cell.i, -2.0/(uph*downh)-2.0/(lefth*righth)}, 
+				});
 
-		} else if (cell.left == nullptr) {
+				b[i] = rightPart(cell.x, cell.y);
+			} break;
+			case Cell::FIRST: {
+				pushLine(A, i, {{cell.i, 1}});
+				b[i] = cell.conditionValue.first.value;
+			} break;
+			case Cell::SECOND: {
+				if (cell.left == nullptr) {
 
-		} else if (cell.right == nullptr) {
+				} else if (cell.right == nullptr) {
 
-		} else */
-		{
-			double uph = std::fabs(cell.up->y - cell.y);
-			double downh = std::fabs(cell.down->y - cell.y);
-			double lefth = std::fabs(cell.left->x - cell.x);
-			double righth = std::fabs(cell.right->x - cell.x);
-			pushLine(A, i, {
-				{cell.left->i, 2.0/(lefth*(righth + lefth))}, 
-				{cell.down->i, 2.0/(downh*(uph + downh))}, 
-				{cell.right->i, 2.0/(righth*(righth + lefth))}, 
-				{cell.up->i, 2.0/(uph*(uph + downh))}, 
-				{cell.i, -2.0/(uph*downh)-2.0/(lefth*righth)}, 
-			});
+				} else if (cell.up == nullptr) {
 
-			b[i] = rightPart(cell.x, cell.y);
+				} else if (cell.down == nullptr) {
+
+				} else {
+					throw std::exception("This is inner cell!");
+				}
+			} break;
+			case Cell::THIRD: {
+
+			} break;
 		}
 	}
 
@@ -249,49 +352,62 @@ void setCells(Cells& cells, const Vector& answer) {
 		cells[i].value = answer(i);
 }
 
-#ifdef _DEBUG
-#define debug(a) std::cout << #a << ": " << std::endl << (a) << std::endl;
-#else
-#define debug(a) ;
-#endif
-
-int main() {
-	std::ofstream fout("a.txt");
-
-	for (int i = 6; i <= 300; i+=2) {
-		if (i % 10 == 0) std::cout << i << std::endl;
-		ShField field(1, 1);
-		//UniformGrid grid;
+void make_table_nonuniform_grid(const std::string& name, const Field& field, const Function2D& f, int size) {
+	auto rightPart = calcLaplacian(f);
+	std::ofstream fout(name);
+	fout << "c\tnorm" << std::endl;
+	for (int i = 1; i <= 400; i++) {
 		NonUniformGrid grid(i/100.0);
-		int size = 15;
-		auto cells_answer = grid.makeCells(field, 0, 0, 1, 1, size, size);
-		auto cells_question = grid.makeCells(field, 0, 0, 1, 1, size, size);
-		auto f = [] (double x, double y) -> double { return exp(x*y + x*x*y + 3); };
-		auto rightPart = [] (double x, double y) -> double { return exp(x*y + x*x*y + 3)*(2*x*x*x + x*x*x*x + 4*x*y*y + y*(2+y) + x*x*(1+4*y*y)); };
-		/*auto f = [] (double x, double y) -> double { return exp(x*y); };
-		auto rightPart = [] (double x, double y) -> double { return exp(x*y)*(x*x+y*y); };*/
-		/*auto f = [] (double x, double y) -> double { return x*x*x*x + y*y*y*y; };
-		auto rightPart = [] (double x, double y) -> double { return 12*(x*x+y*y); };*/
-		/*auto f = [] (double x, double y) -> double { return x*x*x + y*y*y; };
-		auto rightPart = [] (double x, double y) -> double { return 6*(x+y); };*/
-		/*auto f = [] (double x, double y) -> double { return x*x + y*y; };
-		auto rightPart = [] (double x, double y) -> double { return 4; };*/
-		/*auto f = [] (double x, double y) -> double { return 2*x + y; };
-		auto rightPart = [] (double x, double y) -> double { return 0; };*/
+		auto cells_answer = grid.makeCells(field, field.startx, field.starty, field.sizex, field.sizey, size, size);
+		auto cells_question = grid.makeCells(field, field.startx, field.starty, field.sizex, field.sizey, size, size);
 		fillWithFunction(cells_answer, f);
 		fillBoundaryConditions1(cells_question, f);
 		auto slae = makeSLAE(cells_question, rightPart);
-		//debug(slae.first);
-		//debug(slae.second);
-		auto answer = solveSLAE(slae); //debug(answer);
+		auto answer = solveSLAE(slae);
 		setCells(cells_question, answer);
 		double difference = calcDifference(cells_answer, cells_question);
-		//std::cout << "Precision of SLAE solve: " << (slae.first*answer - slae.second).norm() << std::endl;
-		//std::cout << "Difference: " << difference << std::endl;
-		fout << i/100.0 << "\t" << difference << std::endl;
+		if (difference == difference)
+			fout << i/100.0 << "\t" << difference << std::endl;
+
+		std::cout << "\r" << i;
 	}
-
 	fout.close();
+}
 
-	system("pause");
+void make_table_size(const std::string& name, const Field& field, const Function2D& f) {
+	auto rightPart = calcLaplacian(f);
+	std::ofstream fout(name);
+	fout << "size\tnorm" << std::endl;
+	for (int i = 5; i <= 50; i++) {
+		UniformGrid grid;
+		auto cells_answer = grid.makeCells(field, field.startx, field.starty, field.sizex, field.sizey, i, i);
+		auto cells_question = grid.makeCells(field, field.startx, field.starty, field.sizex, field.sizey, i, i);
+		fillWithFunction(cells_answer, f);
+		fillBoundaryConditions1(cells_question, f);
+		auto slae = makeSLAE(cells_question, rightPart);
+		auto answer = solveSLAE(slae);
+		setCells(cells_question, answer);
+		double difference = calcDifference(cells_answer, cells_question);
+		if (difference == difference)
+			fout << i << "\t" << difference << std::endl;
+
+		std::cout << "\r" << i;
+	}
+	fout.close();
+}
+
+int main() {
+	auto f = [] (double x, double y) -> double { return exp(x*y + x*x*y + 3); };
+	//auto f = [] (double x, double y) -> double { return exp(x*y); };
+	//auto f = [] (double x, double y) -> double { return sin(x) + cos(y); };
+	//auto f = [] (double x, double y) -> double { return x*x*x*x*x + y*y*y*y*y; };
+	//auto f = [] (double x, double y) -> double { return x*x*x*x + y*y*y*y; };
+	//auto f = [] (double x, double y) -> double { return x*x*x + y*y*y; };
+	//auto f = [] (double x, double y) -> double { return x*x + y*y; };
+	//auto f = [] (double x, double y) -> double { return 2*x + y; };
+
+	//SquareField field(0, 0, 1, 1);
+	ShField field(0, 0, 1, 1);
+	//make_table_size("a.txt", field, f);
+	make_table_nonuniform_grid("a.txt", field, f, 14);
 }
