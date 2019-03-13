@@ -1,11 +1,9 @@
 #include <iostream>
 #include <functional>
 #include <fstream>
-#include <Eigen/Eigen>
-#include <Eigen/Dense>
-
-typedef Eigen::MatrixXd Matrix;
-typedef Eigen::VectorXd Vector;
+#include <algorithm>
+#include <cassert>
+#include <diagonal.h>
 
 typedef std::function<double(double)> Function1D;
 typedef std::function<double(double, double)> Function2D;
@@ -177,28 +175,28 @@ private:
 
 Function2D calcFirstDerivativeX(const Function2D& f) {
 	return [f] (double x, double y) -> double {
-		const double h = 0.0001;
+		const double h = 0.00001;
 		return (-f(x+2*h, y)+8*f(x+h, y)-8*f(x-h, y)+f(x-2*h, y))/(12*h);
 	};
 }
 
 Function2D calcFirstDerivativeY(const Function2D& f) {
 	return [f] (double x, double y) -> double {
-		const double h = 0.0001;
+		const double h = 0.00001;
 		return (-f(x, y+2*h)+8*f(x, y+h)-8*f(x, y-h)+f(x, y-2*h))/(12*h);
 	};
 }
 
 Function2D calcSecondDerivativeX(const Function2D& f) {
 	return [f] (double x, double y) -> double {
-		const double h = 0.001;
+		const double h = 0.0001;
 		return (-f(x+2*h, y) + 16*f(x+h, y) - 30*f(x, y) + 16*f(x-h, y) - f(x-2*h, y))/(12*h*h);
 	};
 }
 
 Function2D calcSecondDerivativeY(const Function2D& f) {
 	return [f] (double x, double y) -> double {
-		const double h = 0.001;
+		const double h = 0.0001;
 		return (-f(x, y+2*h) + 16*f(x, y+h) - 30*f(x, y) + 16*f(x, y-h) - f(x, y-2*h))/(12*h*h);
 	};
 }
@@ -329,47 +327,42 @@ double calcDifference(const Cells& a, const Cells& b) {
 	return std::sqrt(sum);
 }
 
-struct PushType
-{
-	int i;
-	double value;
-};
+std::pair<MatrixDiagonal, Vector> makeSLAE(const Cells& cells, const Function2D& rightPart) {
+	int n = sqrt(cells.size());
+	assert(n*n == cells.size());
+	MatrixDiagonal A(cells.size(), { 0, 1, -1, n, -n });
+	Vector b(cells.size(), 0);
 
-void pushLine(Matrix& A, int line, std::vector<PushType> p) {
-	std::sort(p.begin(), p.end(), [] (auto& a, auto& b) -> bool {
-		return a.i < b.i;
-	});
+	struct PushType
+	{
+		int i;
+		double value;
+	};
 
-	for (int i = 0; i < A.cols(); ++i) {
-		for (auto& j : p) {
-			if (i == j.i) {
-				A(line, i) = j.value;
-				goto next_line;
+	matrix_diagonal_line_iterator it(A.dimension(), A.getFormat(), false);
+	auto pushLine = [&](const std::vector<PushType>& p) {
+		for (; !it.isLineEnd(); ++it) {
+			for (auto& i : p) {
+				if (i.i == it.j)
+					A.begin(it.dn)[it.di] = i.value;
 			}
 		}
-		A(line, i) = 0;
-
-		next_line:;
-	}
-}
-
-std::pair<Matrix, Vector> makeSLAE(const Cells& cells, const Function2D& rightPart) {
-	Matrix A(cells.size(), cells.size());
-	Vector b(cells.size());
+		++it;
+	};
 
 	for (int i = 0; i < cells.size(); ++i) {
 		const auto& cell = cells[i];
 		switch (cell.conditionType) {
 			case Cell::FICTITIOUS: {
-				pushLine(A, i, {{cell.i, 1 }});
-				b[i] = 0;
+				pushLine({{cell.i, 1 }});
+				b(i) = 0;
 			} break;
 			case Cell::INNER: {
 				double uph = std::fabs(cell.up->y - cell.y);
 				double downh = std::fabs(cell.down->y - cell.y);
 				double lefth = std::fabs(cell.left->x - cell.x);
 				double righth = std::fabs(cell.right->x - cell.x);
-				pushLine(A, i, {
+				pushLine({
 					{cell.left->i, 2.0/(lefth*(righth + lefth))}, 
 					{cell.down->i, 2.0/(downh*(uph + downh))}, 
 					{cell.right->i, 2.0/(righth*(righth + lefth))}, 
@@ -377,27 +370,27 @@ std::pair<Matrix, Vector> makeSLAE(const Cells& cells, const Function2D& rightPa
 					{cell.i, -2.0/(uph*downh)-2.0/(lefth*righth)}, 
 				});
 
-				b[i] = rightPart(cell.x, cell.y);
+				b(i) = rightPart(cell.x, cell.y);
 			} break;
 			case Cell::FIRST: {
-				pushLine(A, i, {{cell.i, 1}});
-				b[i] = cell.conditionValue.first.value;
+				pushLine({{cell.i, 1}});
+				b(i) = cell.conditionValue.first.value;
 			} break;
 			case Cell::SECOND: {
 				double h = cell.conditionValue.second.h;
-				pushLine(A, i, {
+				pushLine({
 					{cell.i, 1.0/h}, 
 					{cell.conditionValue.second.cell_around->i, -1.0/h}, 
 				});
-				b[i] = cell.conditionValue.second.value;
+				b(i) = cell.conditionValue.second.value;
 			} break;
 			case Cell::THIRD: {
 				double h = cell.conditionValue.third.h;
-				pushLine(A, i, {
+				pushLine({
 					{cell.i, 1.0/h + cell.conditionValue.third.c1}, 
 					{cell.conditionValue.third.cell_around->i, -1.0/h}, 
 				});
-				b[i] = cell.conditionValue.second.value;
+				b(i) = cell.conditionValue.second.value;
 			} break;
 		}
 	}
@@ -405,11 +398,19 @@ std::pair<Matrix, Vector> makeSLAE(const Cells& cells, const Function2D& rightPa
 	return {A, b};
 }
 
-Vector solveSLAE(std::pair<Matrix, Vector>& slae) {
-	Matrix& A = slae.first;
+Vector solveSLAE(std::pair<MatrixDiagonal, Vector>& slae) {
+	MatrixDiagonal& A = slae.first;
 	Vector& b = slae.second;
-	using namespace Eigen;
-	return A.bdcSvd(ComputeThinU | ComputeThinV).solve(b);
+	Vector result;
+	SolverSLAE_Iterative solver;
+	solver.epsilon = 1e-12;
+	solver.isLog = false;
+	solver.maxIterations = 3000;
+	solver.start = b;
+	solver.w = 1.4;
+	auto returned = solver.seidel(A, b, result);
+	//std::cout << returned.relativeResidual << std::endl;
+	return result;
 }
 
 void setCells(Cells& cells, const Vector& answer) {
@@ -463,7 +464,7 @@ void make_table_size(const std::string& name, const Field& field, const Function
 	auto rightPart = calcLaplacian(f);
 	std::ofstream fout(name);
 	fout << "size\tnorm" << std::endl;
-	for (int i = 3; i <= 32; i++) {
+	for (int i = 3; i <= 120; i++) {
 		UniformGrid grid;
 		auto cells_answer = grid.makeCells(field, field.startx, field.starty, field.sizex, field.sizey, i, i);
 		auto cells_question = grid.makeCells(field, field.startx, field.starty, field.sizex, field.sizey, i, i);
@@ -562,11 +563,13 @@ int main() {
 
 	make_table_conditions("conditions.txt", namedFunctions);
 
-	//SquareField field(0, 0, 1, 1);
-	//make_table_size("a.txt", field, namedFunctions[7].first, 1);
+	SquareField field(0, 0, 1, 1);
+	make_table_size("a.txt", field, namedFunctions[7].first, 1);
 
-	ShField field(0, 0, 1, 1);
+	/*ShField field(0, 0, 1, 1);
 	for (int i = 5; i < namedFunctions.size(); i++) {
 		make_table_nonuniform_grid(std::string("non_uniform_grid_") + std::to_string(i) + std::string(".txt"), field, namedFunctions[i].first, 20, 1);
-	}
+	}*/
+
+	system("pause");
 }
