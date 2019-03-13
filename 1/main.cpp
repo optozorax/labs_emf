@@ -9,6 +9,7 @@ typedef Eigen::VectorXd Vector;
 
 typedef std::function<double(double)> Function1D;
 typedef std::function<double(double, double)> Function2D;
+typedef std::pair<Function2D, std::string> NamedFunction;
 
 struct Cell
 {
@@ -410,7 +411,7 @@ void make_table_nonuniform_grid(const std::string& name, const Field& field, con
 	auto rightPart = calcLaplacian(f);
 	std::ofstream fout(name);
 	fout << "c\tnorm" << std::endl;
-	for (int i = 1; i <= 400; i++) {
+	for (int i = 1; i <= 5000;) {
 		NonUniformGrid grid(i/100.0);
 		auto cells_answer = grid.makeCells(field, field.startx, field.starty, field.sizex, field.sizey, size, size);
 		auto cells_question = grid.makeCells(field, field.startx, field.starty, field.sizex, field.sizey, size, size);
@@ -430,6 +431,20 @@ void make_table_nonuniform_grid(const std::string& name, const Field& field, con
 			fout << i/100.0 << "\t" << difference << std::endl;
 
 		std::cout << "\r" << i;
+
+		if (i < 200) {
+			i++;
+		} else {
+			if (i < 400) {
+				i += 2;
+			} else {
+				if (i < 1000) {
+					i += 4;
+				} else {
+					i += 10;
+				}
+			}
+		}
 	}
 	fout.close();
 }
@@ -438,7 +453,7 @@ void make_table_size(const std::string& name, const Field& field, const Function
 	auto rightPart = calcLaplacian(f);
 	std::ofstream fout(name);
 	fout << "size\tnorm" << std::endl;
-	for (int i = 5; i <= 50; i++) {
+	for (int i = 3; i <= 32; i++) {
 		UniformGrid grid;
 		auto cells_answer = grid.makeCells(field, field.startx, field.starty, field.sizex, field.sizey, i, i);
 		auto cells_question = grid.makeCells(field, field.startx, field.starty, field.sizex, field.sizey, i, i);
@@ -462,18 +477,86 @@ void make_table_size(const std::string& name, const Field& field, const Function
 	fout.close();
 }
 
-int main() {
-	auto f = [] (double x, double y) -> double { return exp(x*y + x*x*y + 3); };
-	//auto f = [] (double x, double y) -> double { return exp(x*y); };
-	//auto f = [] (double x, double y) -> double { return sin(x) + cos(y); };
-	//auto f = [] (double x, double y) -> double { return x*x*x*x*x + y*y*y*y*y; };
-	//auto f = [] (double x, double y) -> double { return x*x*x*x + y*y*y*y; };
-	//auto f = [] (double x, double y) -> double { return x*x*x + y*y*y; };
-	//auto f = [] (double x, double y) -> double { return x*x + y*y; };
-	//auto f = [] (double x, double y) -> double { return 2*x + y; };
+void make_table_conditions(const std::string& name, const std::vector<NamedFunction>& namedFunctions) {
+	std::ofstream fout(name);
+	fout << "func\t1square\t1sh\t3sh" << std::endl;
 
-	SquareField field(0, 0, 1, 1);
-	//ShField field(0, 0, 1, 1);
-	//make_table_size("a.txt", field, f);
-	make_table_nonuniform_grid("a.txt", field, f, 14, 3);
+	SquareField field1(0, 0, 1, 1);
+	ShField field2(0, 0, 1, 1);
+	UniformGrid grid;
+	int size = 20;
+
+	for (auto& i : namedFunctions) {
+		fout << i.second << "\t";
+		auto& f = i.first;
+		auto rightPart = calcLaplacian(f);
+
+		{
+				auto& field = field1;
+			auto cells_answer = grid.makeCells(field, field.startx, field.starty, field.sizex, field.sizey, size, size);
+			auto cells_question = grid.makeCells(field, field.startx, field.starty, field.sizex, field.sizey, size, size);
+			fillWithFunction(cells_answer, f);
+				fillBoundaryConditions1(cells_question, f);
+			auto slae = makeSLAE(cells_question, rightPart);
+			auto answer = solveSLAE(slae);
+			setCells(cells_question, answer);
+			double difference = calcDifference(cells_answer, cells_question);
+
+			fout << difference << "\t";
+		}
+
+		{
+				auto& field = field2;
+			auto cells_answer = grid.makeCells(field, field.startx, field.starty, field.sizex, field.sizey, size, size);
+			auto cells_question = grid.makeCells(field, field.startx, field.starty, field.sizex, field.sizey, size, size);
+			fillWithFunction(cells_answer, f);
+				fillBoundaryConditions1(cells_question, f);
+			auto slae = makeSLAE(cells_question, rightPart);
+			auto answer = solveSLAE(slae);
+			setCells(cells_question, answer);
+			double difference = calcDifference(cells_answer, cells_question);
+
+			fout << difference << "\t";
+		}
+
+		{
+				auto& field = field2;
+			auto cells_answer = grid.makeCells(field, field.startx, field.starty, field.sizex, field.sizey, size, size);
+			auto cells_question = grid.makeCells(field, field.startx, field.starty, field.sizex, field.sizey, size, size);
+			fillWithFunction(cells_answer, f);
+				fillBoundaryConditions3(cells_question, f, 1);
+			auto slae = makeSLAE(cells_question, rightPart);
+			auto answer = solveSLAE(slae);
+			setCells(cells_question, answer);
+			double difference = calcDifference(cells_answer, cells_question);
+
+			fout << difference << std::endl;
+		}
+	}
+	fout.close();
+}
+
+int main() {
+	std::vector<NamedFunction> namedFunctions;
+	namedFunctions.push_back({[] (double x, double y) -> double { return 2*x+y; }, "2x+y"});
+	namedFunctions.push_back({[] (double x, double y) -> double { return 3*x*x + y*y + x; }, "3x^2+y^2"});
+	namedFunctions.push_back({[] (double x, double y) -> double { return x*x*x + x*y*y + y*y*y; }, "x^3+xy^2+y^3"});
+	namedFunctions.push_back({[] (double x, double y) -> double { return x*x*x*x + y*y*y*y; }, "x^4+y^4"});
+	namedFunctions.push_back({[] (double x, double y) -> double { return x*x*x*x*x + y*y*y*y*y + 2*x*y; }, "x^5+y^5+2xy"});
+	namedFunctions.push_back({[] (double x, double y) -> double { return exp(x+y); }, "exp(x+y)"});
+	namedFunctions.push_back({[] (double x, double y) -> double { return exp(x*x+y*y); }, "exp(x*x+y*y)"});
+	namedFunctions.push_back({[] (double x, double y) -> double { return exp(x*x*x+x*x*y); }, "exp(x^3+yx^2)"});
+	namedFunctions.push_back({[] (double x, double y) -> double { return sin(x)+cos(y); }, "sin(x)+cos(y)"});
+	namedFunctions.push_back({[] (double x, double y) -> double { return sqrt(x*x+y*y); }, "sqrt(x^2+y^2)"});
+	namedFunctions.push_back({[] (double x, double y) -> double { return pow(x, 1.2) + pow(y, 1.5); }, "x^1.2+y^1.5"});
+
+	//make_table_conditions("conditions.txt", namedFunctions);
+
+	//SquareField field(0, 0, 1, 1);
+	//make_table_size("a.txt", field, namedFunctions[7].first, 1);
+
+	ShField field(0, 0, 1, 1);
+	for (int i = 5; i < namedFunctions.size(); i++) {
+		make_table_nonuniform_grid(std::string("non_uniform_grid_") + std::to_string(i) + std::string(".txt"), field, namedFunctions[i].first, 20, 1);
+	}
 }
