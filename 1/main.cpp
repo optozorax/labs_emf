@@ -17,10 +17,11 @@ struct Cell
 
 	enum 
 	{
+		FICTITIOUS, // Фиктивный узел
 		INNER, // Нет краевых условий
 		FIRST, // f(x, y) = value
-		SECOND,  // f'(x, y) = value
-		THIRD,  // f'(x, y) + c1 * f(x, y) + c2 = 0
+		SECOND, // f'(x, y) = value
+		THIRD, // f'(x, y) + c1 * f(x, y) + c2 = 0
 	}
 	conditionType; // краевое условие
 
@@ -145,6 +146,9 @@ public:
 					k++;
 					if (i != 0 && grid[i-1][j] != -1) cells[grid[i-1][j]].up = &cells.back();
 					if (j != 0 && grid[i][j-1] != -1) cells[grid[i][j-1]].right = &cells.back();
+				} else {
+					cells.push_back({k, Cell::FICTITIOUS, 0, 0, x, y, nullptr, nullptr, nullptr, nullptr});
+					k++;
 				}
 			}
 		}
@@ -216,7 +220,7 @@ void fillWithFunction(Cells& cells, const Function2D& f) {
 void fillBoundaryConditions1(Cells& cells, const Function2D& f) {
 	// Первые краевые условия
 	for (auto& i : cells) {
-		if (i.up == nullptr || i.down == nullptr || i.left == nullptr || i.right == nullptr) {
+		if (i.conditionType != Cell::FICTITIOUS && (i.up == nullptr || i.down == nullptr || i.left == nullptr || i.right == nullptr)) {
 			i.conditionType = Cell::FIRST;
 			i.conditionValue.first.value = f(i.x, i.y);
 		}
@@ -228,7 +232,7 @@ void fillBoundaryConditions2(Cells& cells, const Function2D& f) {
 	auto fy = calcFirstDerivativeY(f);
 	int isFirst = 2;
 	for (auto& i : cells) {
-		if (i.up == nullptr || i.down == nullptr || i.left == nullptr || i.right == nullptr) {
+		if (i.conditionType != Cell::FICTITIOUS && (i.up == nullptr || i.down == nullptr || i.left == nullptr || i.right == nullptr)) {
 			if (isFirst || i.left == nullptr && i.right == nullptr || i.up == nullptr && i.down == nullptr) {
 				// Тут уже ничего не сделаешь, потому что это палка, у которой нет соседей, чтобы можно было сделать краевые условия с производной
 				i.conditionType = Cell::FIRST;
@@ -271,7 +275,7 @@ void fillBoundaryConditions3(Cells& cells, const Function2D& f, double c1) {
 	auto fx = calcFirstDerivativeX(f);
 	auto fy = calcFirstDerivativeY(f);
 	for (auto& i : cells) {
-		if (i.up == nullptr || i.down == nullptr || i.left == nullptr || i.right == nullptr) {
+		if (i.conditionType != Cell::FICTITIOUS && (i.up == nullptr || i.down == nullptr || i.left == nullptr || i.right == nullptr)) {
 			if (i.left == nullptr && i.right == nullptr || i.up == nullptr && i.down == nullptr) {
 				// Тут уже ничего не сделаешь, потому что это палка, у которой нет соседей, чтобы можно было сделать краевые условия с производной
 				i.conditionType = Cell::FIRST;
@@ -316,9 +320,11 @@ double calcDifference(const Cells& a, const Cells& b) {
 		return -1;
 	double sum = 0;
 	for (int i = 0; i < a.size(); ++i) {
-		if (a[i].x != b[i].x || a[i].y != b[i].y)
-			return -1;
-		sum += (a[i].value - b[i].value)*(a[i].value - b[i].value);
+		if (a[i].conditionType != Cell::FICTITIOUS) {
+			if (a[i].x != b[i].x || a[i].y != b[i].y)
+				return -1;
+			sum += (a[i].value - b[i].value)*(a[i].value - b[i].value);
+		}
 	}
 	return std::sqrt(sum);
 }
@@ -354,6 +360,10 @@ std::pair<Matrix, Vector> makeSLAE(const Cells& cells, const Function2D& rightPa
 	for (int i = 0; i < cells.size(); ++i) {
 		const auto& cell = cells[i];
 		switch (cell.conditionType) {
+			case Cell::FICTITIOUS: {
+				pushLine(A, i, {{cell.i, 1 }});
+				b[i] = 0;
+			} break;
 			case Cell::INNER: {
 				double uph = std::fabs(cell.up->y - cell.y);
 				double downh = std::fabs(cell.down->y - cell.y);
@@ -550,7 +560,7 @@ int main() {
 	namedFunctions.push_back({[] (double x, double y) -> double { return sqrt(x*x+y*y); }, "sqrt(x^2+y^2)"});
 	namedFunctions.push_back({[] (double x, double y) -> double { return pow(x, 1.2) + pow(y, 1.5); }, "x^1.2+y^1.5"});
 
-	//make_table_conditions("conditions.txt", namedFunctions);
+	make_table_conditions("conditions.txt", namedFunctions);
 
 	//SquareField field(0, 0, 1, 1);
 	//make_table_size("a.txt", field, namedFunctions[7].first, 1);
