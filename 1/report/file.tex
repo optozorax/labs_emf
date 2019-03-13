@@ -1,0 +1,170 @@
+\mytitlepage{прикладной математики}{1}{Уравнения математической физики}{Решение эллиптических краевых задач методом конечных разностей}{ПМ-63}{Шепрут И.И.}{10}{Патрушев И.И.}{2019}
+
+\section{Цель работы}
+
+Разработать программу решения эллиптической краевой задачи методом конечных разностей. Протестировать программу и численно оценить порядок аппроксимации.
+
+\section{Задание}
+
+\noindent\begin{easylist}
+\ListProperties(Hang1=true, Margin2=12pt, Style2**=$\bullet$ , Hide2=2, Hide1=0)
+& Построить прямоугольную сетку в области в соответствии с заданием. Допускается использовать фиктивные узлы для сохранения регулярной структуры.
+& Выполнить конечноразностную аппроксимацию исходного уравнения в соответствии с заданием. Получить формулы для вычисления компонент матрицы A и вектора правой части b.
+& Реализовать программу решения двумерной эллиптической задачи методом конечных разностей с учетом следующих требований:
+&& язык программирования С++ или Фортран;
+&& предусмотреть возможность задания неравномерных сеток по пространству, учет краевых условий в соответствии с заданием;
+&& матрицу хранить в диагональном формате, для решения СЛАУ использовать метод блочной релаксации [2, стр. 886], [3].
+& Протестировать разработанные программы на полиномах соответствующей степени.
+& Провести исследования порядка аппроксимации реализованного методов для различных задач с неполиномиальными решениями. Сравнить полученный порядок аппроксимации с теоретическим.
+\end{easylist}
+
+\textbf{Вариант 10:} Область имеет Ш-образную форму. Предусмотреть учет первых и третьих краевых условий.
+
+\section{Анализ задачи}
+
+Необходимо решить задачу:
+
+$$ \Delta u = f(x, y) $$
+
+Первые краевые условия записываются в виде: $ u(x, y)|_\Gamma = g_1(x, y) $, где $ g_1(x, y) $ --- известная функция. 
+
+Третьи краевые условия записываются в виде: $ u'(x, y) + A\cdot u(x, y) |_\Gamma = g_3(x, y) $ где $ g_3(x, y) $ --- известная функция. 
+
+На первом этапе решения задачи нужно построить сетку. Матрица формируется одним проходом по всем узлам, для регулярных узлов заполняется согласно пятиточечному шаблону, для прочих – в соответствии с краевыми условиями.
+
+\section{Таблицы и графики}
+
+Параметры:
+
+\noindent\begin{easylist}
+\ListProperties(Hang1=true, Margin2=12pt, Style1**=$\bullet$ , Hide1=1)
+& Сетка имеет Ш-образную форму.
+& Область сетки: $[0, 1]\times[0, 1]$.
+& Количество элементов: 20 по обеим осям.
+& Сетка равномерная.
+& Точностью решения является норма $L_2$ разности векторов истинных значений и значений, вычисленных с помощью конечно-разностной аппроксимации.
+& СЛАУ решается при помощи метода Гаусса-Зейделя с точностью $10^{-12}$, максимальным числом итераций $3000$ и параметром релаксации $1.4$.
+\end{easylist}
+
+\subsection{Точность для разных функций}
+
+\begin{center}
+\noindent\pgfplotstabletypeset[
+	columns/func/.style={string type, column name=Функция,},
+	columns/1square/.style={column name={\scriptsize{\tcell{Квадратная область,\\ первые краевые условия}}},},
+	columns/1sh/.style={column name={\scriptsize{\tcell{Ш-образная область,\\ первые краевые условия}}},},
+	columns/3sh/.style={column name={\scriptsize{\tcell{Ш-образная область,\\ третьи краевые условия}}}, column type/.add={}{|},},
+	every head row/.style={before row=\hline,after row=\hline\hline}, 
+	every last row/.style={after row=\hline},
+	column type/.add={|}{},
+	col sep=tab,
+]{0_0_conditions.txt}
+\end{center}
+
+\subsection{Зависимость точности от размера сетки}
+
+Параметры остаются прежними, с небольшими изменениями:
+
+\noindent\begin{easylist}
+\ListProperties(Hang1=true, Margin2=12pt, Style1**=$\bullet$ , Hide1=1)
+& Количество элементов по обеим осям является переменной величиной.
+& Для неполиномиальной функции $e^{x^3+yx^2}$.
+\end{easylist}
+
+\noindent\begin{tikzpicture}
+\begin{semilogyaxis}[xlabel=Количество элементов сетки по одной оси,ylabel=Точность решения,width=\textwidth, height=6cm]
+\addplot[red, no markers] table [y=norm, x=size]{0_0_size.txt};
+\addplot[blue, smooth,domain=3:120] {0.95936/x};
+\addplot[green, smooth,domain=3:120] {1/x^2};
+\legend{Точность решения,$0.95936\cdot x^{-1}$,$x^{-2}$}
+\end{semilogyaxis}
+\end{tikzpicture}	
+
+\subsection{Зависимость точности от параметра разрядки неравномерной сетки}
+
+Параметры остаются прежними, с небольшими изменениями:
+
+\noindent\begin{easylist}
+\ListProperties(Hang1=true, Margin2=12pt, Style1**=$\bullet$ , Hide1=1)
+& Область сетки: $[0, 1]\times[0, 1]$ для красных графиков, и $[1, 2]\times[2, 3]$ для синих графиков.
+& Сетка неравномерная.
+& Коэффициент разрядки неравномерной сетки является переменной величиной.
+\end{easylist}
+
+Для коэффициента разрядки 1 сетка получается равномерной.
+
+\newcommand{\inputgraph}[1]{
+\noindent\begin{tikzpicture}
+\begin{semilogyaxis}[xlabel=Коэффициент разрядки неравномерной сетки,ylabel=Точность решения,width=\textwidth, height=6cm]
+\addplot[red, no markers] table [y=norm, x=c]{0_0_non_uniform_grid_#1.txt};
+\addplot[blue, no markers] table [y=norm, x=c]{1_2_non_uniform_grid_#1.txt};
+\end{semilogyaxis}
+\end{tikzpicture}	
+}
+
+\subsubsection{$2x+y$}
+\inputgraph{0}
+
+\subsubsection{$3x^2+y^2$}
+\inputgraph{1}
+
+\subsubsection{$x^3+xy^2+y^3$}
+\inputgraph{2}
+
+\subsubsection{$x^4+y^4$}
+\inputgraph{3}
+
+\subsubsection{$x^5+y^5+2xy$}
+\inputgraph{4}
+
+\subsubsection{$e^{x+y}$}
+\inputgraph{5}
+
+\subsubsection{$e^{x^2+y^2}$}
+\inputgraph{6}
+
+\subsubsection{$e^{x^3+yx^2}$}
+\inputgraph{7}
+
+\subsubsection{$\sin x+\cos y$}
+\inputgraph{8}
+
+\subsubsection{$\sqrt{x^2+y^2}$}
+\inputgraph{9}
+
+\subsubsection{$x^{1.2}+y^{1.5}$}
+\inputgraph{10}
+
+\section{Выводы}
+
+\noindent\begin{easylist}
+\ListProperties(Hang1=true, Margin2=12pt, Style1**=$\bullet$ , Hide2=1, Hide1=1)
+& Порядок аппроксимации метода конечных разностей с первыми краевыми условиями равен 3, с третьими краевыми условиями равен 1.
+& На неравномерных сетках с первыми краевыми условиями можно получить решение, стремящееся к точному, изменяя коэффициент разрядки.
+& Согласно графику зависимости точности решения от размера сетки, можно вычислить, что порядок сходимости равен 1.
+& Для неполиномиальных функций смещение области расчета может изменять точность решения.
+\end{easylist}
+
+\section{Код программы}
+
+Для решения СЛАУ и хранения матрицы в диагональном формате был использован код из 2 лабораторной работы по Численным Методам.
+
+\subsection{Основной код}
+
+\mycodeinput{c++}{../main.cpp}{main.cpp}
+
+\subsection{Код из другой лабораторной работы}
+
+\subsubsection{Заголовочные файлы}
+
+\mycodeinput{c++}{../nm2/2/diagonal.h}{diagonal.h}
+\mycodeinput{c++}{../nm2/1/vector.h}{vector.h}
+\mycodeinput{c++}{../nm2/1/common.h}{common.h}
+\mycodeinput{c++}{../nm2/1/matrix.h}{matrix.h}
+
+\subsubsection{Файлы исходного кода}
+
+\mycodeinput{c++}{../nm2/2/diagonal.cpp}{diagonal.cpp}
+\mycodeinput{c++}{../nm2/1/vector.cpp}{vector.cpp}
+\mycodeinput{c++}{../nm2/1/common.cpp}{common.cpp}
+\mycodeinput{c++}{../nm2/1/matrix.cpp}{matrix.cpp}

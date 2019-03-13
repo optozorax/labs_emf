@@ -123,7 +123,7 @@ public:
 			hx = sizex * (1.0-c)/(1-pow(c, isizex));
 			hy = sizey * (1.0-c)/(1-pow(c, isizey));
 		} else {
-			// Это равномерная сетка, что ты здесь забыл?
+			// Это равномерная сетка
 			hx = sizex/(isizex-1); 
 			hy = sizey/(isizey-1);
 		}
@@ -422,7 +422,7 @@ void make_table_nonuniform_grid(const std::string& name, const Field& field, con
 	auto rightPart = calcLaplacian(f);
 	std::ofstream fout(name);
 	fout << "c\tnorm" << std::endl;
-	for (int i = 1; i <= 5000;) {
+	for (int i = 1; i <= 700;) {
 		NonUniformGrid grid(i/100.0);
 		auto cells_answer = grid.makeCells(field, field.startx, field.starty, field.sizex, field.sizey, size, size);
 		auto cells_question = grid.makeCells(field, field.startx, field.starty, field.sizex, field.sizey, size, size);
@@ -438,8 +438,9 @@ void make_table_nonuniform_grid(const std::string& name, const Field& field, con
 		auto answer = solveSLAE(slae);
 		setCells(cells_question, answer);
 		double difference = calcDifference(cells_answer, cells_question);
-		if (difference == difference)
-			fout << i/100.0 << "\t" << difference << std::endl;
+		if (difference == difference) {
+			fout << i / 100.0 << "\t" << difference << std::endl;
+		}
 
 		std::cout << "\r" << i;
 
@@ -488,12 +489,12 @@ void make_table_size(const std::string& name, const Field& field, const Function
 	fout.close();
 }
 
-void make_table_conditions(const std::string& name, const std::vector<NamedFunction>& namedFunctions) {
+void make_table_conditions(const std::string& name, const Field& field, const std::vector<NamedFunction>& namedFunctions) {
 	std::ofstream fout(name);
 	fout << "func\t1square\t1sh\t3sh" << std::endl;
 
-	SquareField field1(0, 0, 1, 1);
-	ShField field2(0, 0, 1, 1);
+	SquareField field1(field.startx, field.starty, field.sizex, field.sizey);
+	ShField field2(field.startx, field.starty, field.sizex, field.sizey);
 	UniformGrid grid;
 	int size = 20;
 
@@ -549,27 +550,34 @@ void make_table_conditions(const std::string& name, const std::vector<NamedFunct
 
 int main() {
 	std::vector<NamedFunction> namedFunctions;
-	namedFunctions.push_back({[] (double x, double y) -> double { return 2*x+y; }, "2x+y"});
-	namedFunctions.push_back({[] (double x, double y) -> double { return 3*x*x + y*y + x; }, "3x^2+y^2"});
-	namedFunctions.push_back({[] (double x, double y) -> double { return x*x*x + x*y*y + y*y*y; }, "x^3+xy^2+y^3"});
-	namedFunctions.push_back({[] (double x, double y) -> double { return x*x*x*x + y*y*y*y; }, "x^4+y^4"});
-	namedFunctions.push_back({[] (double x, double y) -> double { return x*x*x*x*x + y*y*y*y*y + 2*x*y; }, "x^5+y^5+2xy"});
-	namedFunctions.push_back({[] (double x, double y) -> double { return exp(x+y); }, "exp(x+y)"});
-	namedFunctions.push_back({[] (double x, double y) -> double { return exp(x*x+y*y); }, "exp(x*x+y*y)"});
-	namedFunctions.push_back({[] (double x, double y) -> double { return exp(x*x*x+x*x*y); }, "exp(x^3+yx^2)"});
-	namedFunctions.push_back({[] (double x, double y) -> double { return sin(x)+cos(y); }, "sin(x)+cos(y)"});
-	namedFunctions.push_back({[] (double x, double y) -> double { return sqrt(x*x+y*y); }, "sqrt(x^2+y^2)"});
-	namedFunctions.push_back({[] (double x, double y) -> double { return pow(x, 1.2) + pow(y, 1.5); }, "x^1.2+y^1.5"});
+	namedFunctions.push_back({[] (double x, double y) -> double { return 2*x+y; }, "{$2x+y$}"});
+	namedFunctions.push_back({[] (double x, double y) -> double { return 3*x*x + y*y + x; }, "{$3x^2+y^2$}"});
+	namedFunctions.push_back({[] (double x, double y) -> double { return x*x*x + x*y*y + y*y*y; }, "{$x^3+xy^2+y^3$}"});
+	namedFunctions.push_back({[] (double x, double y) -> double { return x*x*x*x + y*y*y*y; }, "{$x^4+y^4$}"});
+	namedFunctions.push_back({[] (double x, double y) -> double { return x*x*x*x*x + y*y*y*y*y + 2*x*y; }, "{$x^5+y^5+2xy$}"});
+	namedFunctions.push_back({[] (double x, double y) -> double { return exp(x+y); }, "{$e^{x+y}$}"});
+	namedFunctions.push_back({[] (double x, double y) -> double { return exp(x*x+y*y); }, "{$e^{x^2+y^2}$}"});
+	namedFunctions.push_back({[] (double x, double y) -> double { return exp(x*x*x+x*x*y); }, "{$e^{x^3+yx^2}$}"});
+	namedFunctions.push_back({[] (double x, double y) -> double { return sin(x)+cos(y); }, "{$\sin x + \cos y$}"});
+	namedFunctions.push_back({[] (double x, double y) -> double { return sqrt(x*x+y*y); }, "{$\sqrt{x^2+y^2}$}"});
+	namedFunctions.push_back({[] (double x, double y) -> double { return pow(x, 1.2) + pow(y, 1.5); }, "{$x^{1.2}+y^{1.5}$}"});
 
-	make_table_conditions("conditions.txt", namedFunctions);
+	auto make_tables = [&](std::string add, const Field& field) {
+		std::cout << "Make tables for " << add << std::endl;
 
-	SquareField field(0, 0, 1, 1);
-	make_table_size("a.txt", field, namedFunctions[7].first, 1);
+		std::cout << "\rWrite condition table" << std::endl;
+		make_table_conditions(add + "conditions.txt", field, namedFunctions);
 
-	/*ShField field(0, 0, 1, 1);
-	for (int i = 5; i < namedFunctions.size(); i++) {
-		make_table_nonuniform_grid(std::string("non_uniform_grid_") + std::to_string(i) + std::string(".txt"), field, namedFunctions[i].first, 20, 1);
-	}*/
+		std::cout << "\rWrite size table" << std::endl;
+		//make_table_size(add + "size.txt", field, namedFunctions[7].first, 1);
 
-	system("pause");
+		std::cout << "\rWrite nonuniform grid tables" << std::endl;
+		for (int i = 0; i < namedFunctions.size(); i++) {
+			std::cout << "\r" << i << "                        " << std::endl;
+			make_table_nonuniform_grid(std::string(add + "non_uniform_grid_") + std::to_string(i) + std::string(".txt"), field, namedFunctions[i].first, 20, 1);
+		}
+	};
+
+	make_tables("0_0_", ShField(0, 0, 1, 1));
+	make_tables("1_2_", ShField(1, 2, 1, 1));
 }
