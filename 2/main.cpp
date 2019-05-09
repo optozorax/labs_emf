@@ -96,6 +96,10 @@ public:
 			return x[i-1];
 	}
 
+	double middle(int i) const {
+		return x[i];
+	}
+
 	double right(int i) const {
 		if (i == x.size() - 1)
 			return x.back()+0.00001;
@@ -125,11 +129,11 @@ public:
 	} /// Получить значение функции аппроксимации в некоторой точке
 
 	double basic(double pos, int i) const {
-		return basicFunction(left(i), x[i], right(i), pos);
+		return basicFunction(left(i), middle(i), right(i), pos);
 	}
 
 	double basic_grad(double pos, int i) const {
-		return basicFunctionGrad(left(i), x[i], right(i), pos);	
+		return basicFunctionGrad(left(i), middle(i), right(i), pos);	
 	}
 };
 
@@ -140,7 +144,10 @@ double calc_a1_integral(const lin_approx_t& lambda, const lin_approx_t& u, int i
 		return lambda.value(u.value(x)) * u.basic_grad(x, i) * u.basic_grad(x, j);
 	};
 	std::vector<double> X;
-	make_grid(X, std::min(u.left(i), u.left(j))-1, std::max(u.right(i), u.right(j))+1, 100);
+	if (i != j)
+		make_grid(X, std::min(u.middle(i), u.middle(j)), std::min(u.right(i), u.right(j)), 100);
+	else
+		make_grid(X, u.middle(i), u.right(i), 100);
 	return integral_gauss3(X, f);
 }
 
@@ -151,7 +158,10 @@ double calc_a2_integral(const lin_approx_t& sigma, const lin_approx_t& u, int i,
 		return sigma.value(x) * u.basic(x, i) * u.basic(x, j);
 	};
 	std::vector<double> X;
-	make_grid(X, std::min(u.left(i), u.left(j)), std::max(u.right(i), u.right(j)), 5);
+	if (i != j)
+		make_grid(X, std::min(u.middle(i), u.middle(j)), std::min(u.right(i), u.right(j)), 100);
+	else
+		make_grid(X, u.middle(i), u.right(i), 100);
 	return integral_gauss3(X, f);	
 }
 
@@ -160,7 +170,7 @@ double calc_b1_integral(const lin_approx_t& f, const lin_approx_t& u, int i) {
 		return f.value(x) * u.basic(x, i);
 	};
 	std::vector<double> X;
-	make_grid(X, u.left(i)-1, u.right(i)+1, 100);
+	make_grid(X, u.left(i), u.right(i), 100);
 	return integral_gauss3(X, fun);	
 }
 
@@ -169,7 +179,7 @@ double calc_b2_integral(const lin_approx_t& sigma, const lin_approx_t& u, const 
 		return sigma.value(x) * u_last_time.value(x) * u.basic(x, i);
 	};
 	std::vector<double> X;
-	make_grid(X, u.left(i)-1, u.right(i)+1, 100);
+	make_grid(X, u.left(i), u.right(i), 100);
 	return integral_gauss3(X, fun);	
 }
 
@@ -185,7 +195,7 @@ Matrix calcA(const lin_approx_t& u_last, double dt, Function1D lambda, Function1
 	auto sigma_approx = approximate_function(sigma, u_last);
 
 	Matrix result(u_last.size(), u_last.size());
-	for (int i = 0; i < u_last.size(); ++i) {
+	for (int i = 0; i < u_last.size()-1; ++i) {
 		for (int j = 0; j < u_last.size(); ++j) {
 			result(i, j) = calc_a1_integral(lambda_approx, u_last, i, j) + calc_a2_integral(sigma_approx, u_last, i, j) / dt;
 		}
@@ -256,9 +266,9 @@ Result solveFixedPointIteration(
 		auto b = calcB(u, dt, std::bind(f, std::placeholders::_1, time), sigma, u_last_time);
 		write_first_boundary_conditions(A, b, u, u_true, time);
 
-		//cout << "x:" << endl << last_x << endl;
-		//cout << "A: " << endl << A << endl;
-		//cout << "b: " << endl << b << endl;
+		cout << "x:" << endl << last_x << endl;
+		cout << "A: " << endl << A << endl;
+		cout << "b: " << endl << b << endl;
 
 		Eigen::JacobiSVD<Matrix> svd(A, Eigen::ComputeThinU | Eigen::ComputeThinV);
 		Vector x = svd.solve(b);
@@ -295,7 +305,7 @@ Result solveFixedPointIteration(
 
 Function1D calcFirstDerivative(const Function1D& f) {
 	return [f](double x) -> double {
-		const double h = 0.00001;
+		const double h = 0.001;
 		return (-f(x + 2 * h) + 8 * f(x + h) - 8 * f(x - h) + f(x - 2 * h)) / (12 * h);
 	};
 }
@@ -311,7 +321,7 @@ Function2D calcRightPart(
 		auto ut = calcFirstDerivative(std::bind(u, x, _1));
 		auto ux = calcFirstDerivative(std::bind(u, _1, t));
 		auto lambda_grad = [=](double x, double t) -> double {
-			return lambda(u(x, t)) * ux(t);
+			return lambda(u(x, t)) * ux(x);
 		};
 		auto div = calcFirstDerivative(std::bind(lambda_grad, _1, t));
 		return -div(x) + sigma * ut(x);
@@ -334,8 +344,8 @@ ostream& operator<<(ostream& out, const std::vector<double>& mas) {
 
 
 int main() {
-	auto u_true = [] (double x, double t) -> double { return x; };
-	auto lambda = [] (double u) -> double { return exp(exp(u)-1)+1; };
+	auto u_true = [] (double x, double t) -> double { return 5*x*x + 3*x; };
+	auto lambda = [] (double u) -> double { return u; };
 	auto sigma = [] (double x) -> double { return 0; };
 	auto f = calcRightPart(lambda, u_true, 0);
 
