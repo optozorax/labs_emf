@@ -145,9 +145,9 @@ double calc_a1_integral(const Function1D& lambda, const lin_approx_t& u, int i, 
 	};
 	std::vector<double> X;
 	if (i != j)
-		make_grid(X, std::min(u.middle(i), u.middle(j)), std::min(u.right(i), u.right(j)), 100);
+		make_grid(X, std::min(u.middle(i), u.middle(j)), std::min(u.right(i), u.right(j)), 10);
 	else
-		make_grid(X, u.left(i), u.right(i), 100);
+		make_grid(X, u.left(i), u.right(i), 10);
 	return integral_gauss3(X, f);
 }
 
@@ -159,9 +159,9 @@ double calc_a2_integral(const Function1D& sigma, const lin_approx_t& u, int i, i
 	};
 	std::vector<double> X;
 	if (i != j)
-		make_grid(X, std::min(u.middle(i), u.middle(j)), std::min(u.right(i), u.right(j)), 100);
+		make_grid(X, std::min(u.middle(i), u.middle(j)), std::min(u.right(i), u.right(j)), 10);
 	else
-		make_grid(X, u.left(i), u.right(i), 100);
+		make_grid(X, u.left(i), u.right(i), 10);
 	return integral_gauss3(X, f);	
 }
 
@@ -170,7 +170,7 @@ double calc_b1_integral(const Function1D& f, const lin_approx_t& u, int i) {
 		return f(x) * u.basic(x, i);
 	};
 	std::vector<double> X;
-	make_grid(X, u.left(i), u.right(i), 100);
+	make_grid(X, u.left(i), u.right(i), 10);
 	return integral_gauss3(X, fun);	
 }
 
@@ -179,7 +179,7 @@ double calc_b2_integral(const Function1D& sigma, const lin_approx_t& u, const li
 		return sigma(x) * u_last_time.value(x) * u.basic(x, i);
 	};
 	std::vector<double> X;
-	make_grid(X, u.left(i), u.right(i), 100);
+	make_grid(X, u.left(i), u.right(i), 10);
 	return integral_gauss3(X, fun);	
 }
 
@@ -227,14 +227,21 @@ struct Result
 		EXIT_ITERATIONS,
 		EXIT_ERROR
 	} exitType;
-	int iterations;
 
 	lin_approx_t answer;
-
-	std::vector<Matrix> a_history;
-	std::vector<Vector> b_history;
-	std::vector<lin_approx_t> u_history;
+	int iterations;
+	double residual;
 };
+
+ostream& operator<<(ostream& out, const Result::ExitType& exit) {
+	switch (exit) {
+		case Result::EXIT_RESIDUAL: out << "residual"; break;
+		case Result::EXIT_STEP: out << "step"; break;
+		case Result::EXIT_ITERATIONS: out << "iterations"; break;
+		case Result::EXIT_ERROR: out << "error"; break;
+	}
+	return out;
+}
 
 Result solveFixedPointIteration(
 	Function2D f,
@@ -243,7 +250,9 @@ Result solveFixedPointIteration(
 	Function1D sigma,
 	const lin_approx_t& u_last_time, 
 	double dt,
-	double time
+	double time,
+	double eps, 
+	int maxiter
 ) {
 	lin_approx_t u = u_last_time;
 
@@ -258,9 +267,9 @@ Result solveFixedPointIteration(
 		auto b = calcB(u, dt, std::bind(f, std::placeholders::_1, time), sigma, u_last_time);
 		write_first_boundary_conditions(A, b, u, u_true, time);
 
-		cout << "x:" << endl << last_x << endl;
-		cout << "A: " << endl << A << endl;
-		cout << "b: " << endl << b << endl;
+		//cout << "x:" << endl << last_x << endl;
+		//cout << "A: " << endl << A << endl;
+		//cout << "b: " << endl << b << endl;
 
 		Eigen::JacobiSVD<Matrix> svd(A, Eigen::ComputeThinU | Eigen::ComputeThinV);
 		Vector x = svd.solve(b);
@@ -268,11 +277,8 @@ Result solveFixedPointIteration(
 			u.q[i] = x(i);
 
 		result.iterations++;
-		result.a_history.push_back(A);
-		result.b_history.push_back(b);
-		result.u_history.push_back(u);
 
-		if (result.iterations > 100) {
+		if (result.iterations > maxiter) {
 			result.exitType = Result::EXIT_ITERATIONS;
 			break;
 		}
@@ -284,13 +290,14 @@ Result solveFixedPointIteration(
 
 			double au = (A1 * x - b1).norm();
 			double bu = b1.norm();
-			if (au/bu < 0.001) {
+			result.residual = au/bu;
+			if (au/bu < eps) {
 				result.exitType = Result::EXIT_RESIDUAL;
 				break;
 			}
 		}
 
-		if ((x-last_x).norm() < 0.001) {
+		if ((x-last_x).norm() < eps) {
 			result.exitType = Result::EXIT_STEP;
 			break;
 		}
@@ -313,7 +320,7 @@ Function1D calcFirstDerivative(const Function1D& f) {
 Function2D calcRightPart(
 	const Function1D& lambda, 
 	const Function2D& u, 
-	double sigma
+	const Function1D& sigma
 ) {
 	// f = -div(lambda(u) * grad u) + sigma * du/dt
 	return [=](double x, double t) -> double {
@@ -324,7 +331,7 @@ Function2D calcRightPart(
 			return lambda(u(x, t)) * ux(x);
 		};
 		auto div = calcFirstDerivative(std::bind(lambda_grad, _1, t));
-		return -div(x) + sigma * ut(x);
+		return -div(x) + sigma(x) * ut(x);
 	};
 }
 
@@ -338,8 +345,24 @@ double norm(const std::vector<double>& a, const std::vector<double>& b) {
 
 ostream& operator<<(ostream& out, const std::vector<double>& mas) {
 	for (auto& i : mas)
-		cout << i << " ";
+		out << i << " ";
 	return out;
+}
+
+void write_iterations_information(double t0, const Result& result, const Function2D& u_true) {
+	cout << "time: " << t0 << endl;
+	cout << "residual: " << result.residual << endl;
+	cout << "iterations: " << result.iterations << endl;
+	cout << "answer:   " << result.answer.q << endl;
+
+	lin_approx_t u_truly_approx = result.answer;
+	for (int j = 0; j < u_truly_approx.x.size(); j++)
+		u_truly_approx.q[j] = u_true(u_truly_approx.x[j], t0);
+	cout << "shold be: " << u_truly_approx.q << endl;
+
+	cout << "norm: " << norm(u_truly_approx.q, result.answer.q) << endl;
+
+	cout << endl << "---------------------------" << endl;
 }
 
 void solveByTime(
@@ -348,65 +371,44 @@ void solveByTime(
 	Function1D lambda,
 	Function1D sigma,
 	const lin_approx_t& u_start,
-	const vector<double>& time_grid
+	const vector<double>& time_grid, 
+	double eps,
+	double maxiter
 ) {
 	lin_approx_t u = u_start;
 
 	for (int i = 0; i < time_grid.size()-1; ++i) {
-		auto result = solveFixedPointIteration(f, u_true, lambda, sigma, u, time_grid[i+1]-time_grid[i], time_grid[i]);
-		cout << "time: " << time_grid[i] << endl;
-		cout << "iterations: " << result.iterations << endl;
-		cout << "answer:   " << result.answer.q << endl;
+		double t0 = time_grid[i];
+		double t1 = time_grid[i+1];
+		auto result = solveFixedPointIteration(f, u_true, lambda, sigma, u, t1-t0, t0, eps, maxiter);
 
-		lin_approx_t u_truly_approx = u_start;
-		for (int j = 0; j < u_truly_approx.x.size(); j++)
-			u_truly_approx.q[j] = u_true(u_truly_approx.x[j], time_grid[i]);
-		cout << "shold be: " << u_truly_approx.q << endl;
-
-		std::vector<double> grid;
-		make_grid(grid, 0, 1, 100);
-		cout << "integral norm: " << integral_gauss3(grid, [&](double x) -> double {
-			return std::fabs(u_true(x, time_grid[i]) - result.answer.value(x));
-		}) << endl;
+		// Выводим мета-информацию
+		write_iterations_information(t0, result, u_true);
 
 		u = result.answer;
-
-		cout << endl << "---------------------------" << endl;
 	}
 }
 
 int main() {
-	auto u_true = [] (double x, double t) -> double { return 3*x; };
-	auto lambda = [] (double u) -> double { return u*u; };
-	auto sigma = [] (double x) -> double { return 0; };
-	auto f = calcRightPart(lambda, u_true, 0);
+	auto u_true = [] (double x, double t) -> double { return 3*x*x + exp(t); };
+	auto lambda = [] (double u) -> double { return u; };
+	auto sigma = [] (double x) -> double { return 1; };
+	auto f = calcRightPart(lambda, u_true, sigma);
 
 	lin_approx_t u;
 	make_grid(u.x, 0, 1, 10);
 	for (int i = 0; i < u.x.size(); i++)
-		u.q.push_back(u_true(u.x[i], 0)-0.1);
+		u.q.push_back(u_true(u.x[i], 0));
+		//u.q.push_back(u_true(u.x[i], 0)-0.01);
 		//u.q.push_back(1);
 
-	auto result = solveFixedPointIteration(f, u_true, lambda, sigma, u, 0.001, 0);
+	/*auto result = solveFixedPointIteration(f, u_true, lambda, sigma, u, 0.001, 0, 0.001, 1000);
+	write_iterations_information(0, result, u_true); */
 
-	cout << "iterations: " << result.iterations << endl;
-	cout << "answer:   " << result.answer.q << endl;
-	lin_approx_t u_truly_approx = u;
-	for (int j = 0; j < u_truly_approx.x.size(); j++)
-		u_truly_approx.q[j] = u_true(u_truly_approx.x[j], 0);
-	cout << "shold be: " << u_truly_approx.q << endl;
-
-	cout << "norm: " << norm(u_truly_approx.q, result.answer.q) << endl;
-	
-	std::vector<double> grid;
-	make_grid(grid, 0, 1, 100);
-	cout << "integral norm: " << integral_gauss3(grid, [&](double x) -> double {
-		return std::fabs(u_true(x, 0) - result.answer.value(x));
-	}) << endl;
-
-	/*vector<double> time;
-	make_grid(time, 0, 1, 10);
-	solveByTime(f, u_true, lambda, sigma, u, time);*/
+	vector<double> time;
+	make_grid(time, 0, 1, 100);
+	time.erase(time.begin());
+	solveByTime(f, u_true, lambda, sigma, u, time, 1e-7, 100);
 
 	system("pause");
 }
