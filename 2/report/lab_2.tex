@@ -1,0 +1,187 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage[english,russian]{babel}
+\usepackage{fontspec}
+\defaultfontfeatures{Ligatures={TeX},Renderer=Basic}
+\setmainfont[Ligatures={TeX,Historic}]{Calibri Light}
+\setsansfont{Calibri Light}
+\setmonofont{Consolas}
+
+\usepackage{indentfirst}
+\frenchspacing
+
+% Для математики
+\usepackage{amssymb,amsmath}
+\setcounter{MaxMatrixCols}{20}
+\parindent=24pt
+\parskip=0pt
+\tolerance=2000
+
+% Для настройки размера страницы
+\usepackage{geometry}
+\geometry{
+	a4paper,
+	total={170mm,257mm},
+	left=20mm,
+	top=20mm,
+}
+
+% Для вставки графики
+\usepackage{graphicx}
+\usepackage{hyperref}
+
+% Для таблиц
+\usepackage{longtable}
+\usepackage{multirow}
+\usepackage{tabu}
+\usepackage{colortbl}
+\usepackage{hhline}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage[table]{xcolor} 
+\usepackage{slashbox}
+
+% Создаем команду, чтобы переносить текст на новую строку внутри таблицы
+\newcommand{\tcell}[1]{\begin{tabular}{@{}c@{}}#1\end{tabular}}
+\newcommand{\ltcell}[1]{\begin{tabular}{@{}l@{}}#1\end{tabular}}
+
+% Пакет для списков
+\usepackage[ampersand]{easylist}
+
+% Для контура вокруг текста
+\usepackage[outline]{contour}
+
+% Пакеты от tikz
+\usepackage{tikz}
+\usepackage{graphics}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\usepackage{xcolor}
+\usetikzlibrary{calc}
+\usetikzlibrary{through}
+\usetikzlibrary{intersections}
+\usetikzlibrary{patterns}
+\usetikzlibrary{scopes}
+\usetikzlibrary{decorations.pathreplacing}
+\usetikzlibrary{arrows.meta}
+
+% Для цветных таблиц
+\usepackage{multicol}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins}
+\tcbuselibrary{breakable}
+\tcbuselibrary{minted}
+\usemintedstyle{vs}
+
+% Для подсветки кода
+\usepackage{minted}
+
+% Задаем цвет номеров строк подсветки кода
+\renewcommand{\theFancyVerbLine}{\sffamily\textcolor[rgb]{1, 1, 1}{\fontsize{4}{4}\selectfont\arabic{FancyVerbLine}}}
+
+% Определяем новую команду для красивой вставки кода в рамочке и с прочими прелестями
+\newcommand{\mycodeinput}[3]{
+\begin{tcolorbox}[
+	colback=black!5!white,
+	colframe=black!30!white,
+	boxrule=0.5pt, 
+	listing only,
+	left=-0.5mm,
+	leftrule=3.3mm,
+	arc=2mm, outer arc=2mm,
+	top=0pt,
+	bottom=0pt,
+	enhanced jigsaw,
+	breakable,
+	title={#3},
+	coltitle=black, 
+	fonttitle=\bfseries\ttfamily,
+	break at=-\baselineskip/0pt/\textheight, % Магия для работы multicols
+	attach boxed title to top center={yshift=-1mm,yshifttext=-1mm},
+	boxed title style={
+		enhanced,
+		nobeforeafter,
+		tcbox raise base,
+		boxrule=0.4pt,
+		top=0.5mm,
+		bottom=0.5mm,
+		right=0mm,
+		left=4mm,
+		arc=1pt,
+		boxsep=2pt,
+		before upper={\vphantom{dlg}},
+		colframe=black!30!white,
+		colback=black!10!white,
+		overlay={
+			\begin{tcbclipinterior}
+			\fill[black!30!white]
+				(frame.south west)
+					rectangle node[text=white,font=\sffamily\bfseries\scriptsize,rotate=90] {FILE} 
+				([xshift=4mm]frame.north west);
+			\end{tcbclipinterior}
+		}
+	},
+]
+\inputminted[
+	breaklines,
+	breakanywhere=true,
+	autogobble,
+	linenos,
+	numbersep=1mm,
+	mathescape, 
+	fontsize=\fontsize{8}{8}\selectfont, 
+	tabsize=4
+]{#1}{#2}
+\end{tcolorbox}
+}
+
+% Определяем новую команду для вставки кода прямо в тексте
+\newtcbox{\inlinecodetable}{on line,
+arc=2pt,colback=gray!10!white,colframe=gray!50!black,
+before upper={\rule[-3pt]{0pt}{10pt}},boxrule=0.5pt,
+boxsep=0pt,left=2pt,right=2pt,top=2pt,bottom=0pt}
+\newcommand{\mycodeinline}[2]{\inlinecodetable{\mintinline{#1}{#2}}}
+
+% Определяем новую команду для создания титульного листа
+\newcommand{\mytitlepage}[9]{
+\begin{center}
+\hfill \break
+\Large{Министерство образования и науки Российской Федерации}\\
+\hfill \break
+\large{Федеральное государственное бюджетное образовательное учреждение высшего образования}\\ 
+\normalsize{\textbf{«НОВОСИБИРСКИЙ ГОСУДАРСТВЕННЫЙ ТЕХНИЧЕСКИЙ УНИВЕРСИТЕТ»}}\\
+\hfill \break
+\includegraphics{nstu_logo.eps} \\
+\hfill \break
+\large{Кафедра #1}\\
+\hfill \break
+\large{Лабораторная работа №#2\\по дисциплине <<#3>>}\\
+\hfill \break
+\hfill \break
+\Large{\textbf{#4}}\\
+\hfill \break
+\hfill \break 
+\normalsize{\begin{tabular}{cllp{1.5cm}p{1.5cm}}
+\multirow{5}{*}[0.75cm]{\includegraphics[scale=0.5]{fami_logo.eps}}
+& \textbf{Факультет:} & ПМИ & & \\[1.25ex]
+& \textbf{Группа:} & #5 & & \\[1.25ex]
+& \textbf{Студенты:} & #6 & & \\[1.25ex]
+& \textbf{Вариант:} & #7 & & \\[1.25ex]
+& \textbf{Преподаватель:} & #8 & & \\[1.25ex]
+\end{tabular}} \\
+\hfill \break
+\hfill \break
+\hfill \break
+\hfill \break
+\hfill \break
+\large{Новосибирск\\#9}
+\end{center}
+\thispagestyle{empty}
+\newpage 
+\setcounter{page}{1}
+}
+
+\begin{document}
+
+\input{file}
+
+\end{document}s

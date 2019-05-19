@@ -42,11 +42,11 @@ double integral_gauss3(const vector<double>& X, Function1D f) {
 }
 
 //-----------------------------------------------------------------------------
-void make_grid(vector<double>& X, double a, double b, long n) {
+void make_grid(vector<double>& X, double a, double b, long n, Function1D move = [] (double x) -> double {return x;}) {
 	X.clear();
-	double h = (b-a)/n;
+	double size = b-a;
 	for (double i = 0; i <= n; ++i)
-		X.push_back(a + h * i);
+		X.push_back(a + move(i/double(n)) * size);
 }
 
 //-----------------------------------------------------------------------------
@@ -203,11 +203,11 @@ public:
 
 	double basic(double pos, int i) const {
 		return basicFunction(left(i), middle(i), right(i), pos);
-	}
+	} /// Получить значение базовой функции под номером i в точке pos
 
 	double basic_grad(double pos, int i) const {
 		return basicFunctionGrad(left(i), middle(i), right(i), pos);	
-	}
+	} /// Получить значение производной базовой функции под номером i в точке pos
 };
 
 //-----------------------------------------------------------------------------
@@ -437,14 +437,14 @@ vector<Result> solveByTime(
 	vector<Result> res;
 	lin_approx_t u = u_start;
 
-	for (int i = 0; i < time_grid.size()-1; ++i) {
+	for (int i = 1; i < time_grid.size(); ++i) {
 		double t0 = time_grid[i];
-		double t1 = time_grid[i+1];
-		auto result = solveFixedPointIteration(f, u_true, lambda, sigma, u, t1-t0, t0, eps, maxiter);
+		double t1 = time_grid[i-1];
+		auto result = solveFixedPointIteration(f, u_true, lambda, sigma, u, t0-t1, t0, eps, maxiter);
 		res.push_back(result);
 
 		// Выводим мета-информацию
-		// write_iterations_information(t0, result, u_true);
+		//write_iterations_information(t0, result, u_true);
 
 		u = result.answer;
 	}
@@ -456,6 +456,7 @@ vector<Result> solveByTime(
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 
+//-----------------------------------------------------------------------------
 template<class A, class B, class C>
 struct triple {
 	A first;
@@ -464,8 +465,17 @@ struct triple {
 };
 
 //-----------------------------------------------------------------------------
-void writeFirstInvestigation() {
-	vector<triple<Function2D, string, bool>> us;
+vector<triple<Function2D, string, bool>> us;
+vector<pair<Function1D, string>> lambdas;
+vector<Function2D> moves;
+auto sigma = [] (double x) -> double { return 1; };
+
+double a = 1, b = 2, n = 20; // Характеристики сетки по пространству
+double at = 0, bt = 1, nt = 20; // Характеристики сетки по времени
+double na = 0, nb = 1, nn = 1000; // Характеристики сетки по параметру t, в зависимости от которого меняются неравномерные сетки
+
+//-----------------------------------------------------------------------------
+void init() {
 	us.push_back({[] (double x, double t) -> double { return 3*x + t; }, "$3x+t$", false});
 	us.push_back({[] (double x, double t) -> double { return 2*x*x + t; }, "$2x^2+t$", false});
 	us.push_back({[] (double x, double t) -> double { return x*x*x + t; }, "$x^3+t$", false});
@@ -480,7 +490,6 @@ void writeFirstInvestigation() {
 	us.push_back({[] (double x, double t) -> double { return exp(x) + exp(t); }, "$e^x+e^t$", true});
 	us.push_back({[] (double x, double t) -> double { return exp(x) + sin(t); }, "$e^x+sin(t)$", true});
 
-	vector<pair<Function1D, string>> lambdas;
 	lambdas.push_back({[] (double u) -> double { return 1; }, "$1$"});
 	lambdas.push_back({[] (double u) -> double { return u; }, "$u$"});
 	lambdas.push_back({[] (double u) -> double { return u*u; }, "$u^2$"});
@@ -490,9 +499,14 @@ void writeFirstInvestigation() {
 	lambdas.push_back({[] (double u) -> double { return exp(u); }, "$e^u$"});
 	lambdas.push_back({[] (double u) -> double { return sin(u); }, "sinu"});
 
-	double a = 1, b = 2, n = 10; // Характеристики сетки по пространству
-	double at = 0, bt = 1, nt = 10; // Характеристики сетки по времени
+	moves.push_back([] (double x, double t) -> double { return pow(x, t); });
+	moves.push_back([] (double x, double t) -> double { return pow(x, 1.0/t); });
+	moves.push_back([] (double x, double t) -> double { return (pow(t, x)-1.0)/(t-1.0); });
+	moves.push_back([] (double x, double t) -> double { return (pow(1.0/t, x)-1.0)/(1.0/t-1.0); });
+}
 
+//-----------------------------------------------------------------------------
+void writeFirstInvestigation() {
 	ofstream fout("first.txt");
 	fout << "a\t";
 	for (auto& i : lambdas) fout << i.second << ((i.second != lambdas.back().second) ? "\t" : "");
@@ -500,8 +514,6 @@ void writeFirstInvestigation() {
 
 	vector<double> time;
 	make_grid(time, at, bt, nt);
-	time.erase(time.begin());
-	time.push_back(time[1]-time[0] + bt);
 	for (auto& i : us) {
 		fout << i.second << "\t";
 		auto u_true = i.first;
@@ -536,75 +548,151 @@ void writeFirstInvestigation() {
 }
 
 //-----------------------------------------------------------------------------
+void writeGridInvestigation(
+	const Function2D& u_true, string su,
+	const string& file,
+	const Function1D& lambda, string slambda) {
+	// Делаем равномерную сетку по времени
+	vector<double> time;
+	make_grid(time, at, bt, nt);
+	time.erase(time.begin());
+	time.push_back(time[1]-time[0] + bt);
+
+	pair<int, double> resu = {-1, 0};
+
+	auto test_grid = [&resu, time, u_true, lambda] (const vector<double>& grid) -> pair<int, double> {
+		lin_approx_t u; u.x = grid;
+		for (int j = 0; j < u.x.size(); j++) u.q.push_back(1);
+		lin_approx_t u_truly_approx = calcTrulyApprox(u.x, u_true, bt);
+
+		auto result = solveByTime(calcRightPart(lambda, u_true, sigma), u_true, lambda, sigma, u, time, 0.001, 100);
+
+		int itersum = 0; for (auto& k : result) itersum += k.iterations;
+		double residual = norm(u_truly_approx.q, result.back().answer.q);
+		if (residual > resu.second * 2 && resu.first != -1) residual = resu.second * 2;
+		if (itersum > resu.first * 2 && resu.first != -1) itersum = resu.first * 2;
+		return {itersum, residual};
+	};
+
+	ofstream fout(file);
+	fout << "u = " << su << ", lambda = " << slambda << endl;
+
+	// Получаем результаты для равномерной сетки
+	vector<double> x_uniform;
+	make_grid(x_uniform, a, b, n);
+	resu = test_grid(x_uniform);
+
+	fout << "t\tru\tiu";
+	int counter = 0;
+	for (auto& i : moves) {
+		counter++;
+		fout << "\tr" << counter << "\ti" << counter;
+	}
+	fout << endl;
+	for (int i = 1; i <= nn; i++) {
+		double t = na + (nb-na) * i/nn;
+		cout << "\r" << 100 * t << "      ";
+		fout << t << "\t" << resu.second << "\t" << resu.first;
+
+		vector<double> grid;
+		for (auto& move : moves) {
+			make_grid(grid, a, b, n, bind(move, placeholders::_1, t));
+			auto res = test_grid(grid);
+			fout << "\t" << res.second << "\t" << res.first;
+		}
+
+		fout << endl;
+	}
+	cout << endl;
+
+	fout.close();
+}
+//-----------------------------------------------------------------------------
+void writeGridInvestigationTime(
+	const Function2D& u_true, string su,
+	const string& file,
+	const Function1D& lambda, string slambda) {
+	pair<int, double> resu = {-1, 0};
+
+	auto test_grid = [u_true, lambda, resu] (const vector<double>& grid) -> pair<int, double> {
+		lin_approx_t u; make_grid(u.x, a, b, n);
+		for (int j = 0; j < u.x.size(); j++) u.q.push_back(u_true(u.x[j], at));
+		lin_approx_t u_truly_approx = calcTrulyApprox(u.x, u_true, bt);
+
+		auto result = solveByTime(calcRightPart(lambda, u_true, sigma), u_true, lambda, sigma, u, grid, 0.001, 100);
+
+		int itersum = 0; for (auto& k : result) itersum += k.iterations;
+		double residual = norm(u_truly_approx.q, result.back().answer.q);
+		if (residual > resu.second * 2 && resu.first != -1) residual = resu.second * 2;
+		if (itersum > resu.first * 2 && resu.first != -1) itersum = resu.first * 2;
+		return {itersum, residual};
+	};
+
+	ofstream fout(file);
+	fout << "u = " << su << ", lambda = " << slambda << endl;
+
+	// Получаем результаты для равномерной сетки
+	vector<double> uniform;
+	make_grid(uniform, at, bt, nt);
+	resu = test_grid(uniform);
+
+	fout << "t\tru\tiu";
+	int counter = 0;
+	for (auto& i : moves) {
+		counter++;
+		fout << "\tr" << counter << "\ti" << counter;
+	}
+	fout << endl;
+	for (int i = 1; i <= nn; i++) {
+		double t = na + (nb-na) * i/nn;
+		cout << "\r" << 100 * t << "      ";
+		fout << t << "\t" << resu.second << "\t" << resu.first;
+
+		vector<double> grid;
+		for (auto& move : moves) {
+			make_grid(grid, at, bt, nt, bind(move, placeholders::_1, t));
+			auto res = test_grid(grid);
+			fout << "\t" << res.second << "\t" << res.first;
+		}
+
+		fout << endl;
+	}
+
+	cout << endl;
+
+	fout.close();
+}
+
+//-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 
 int main() {
-	// auto u_true = [] (double x, double t) -> double { return 3*x*x + exp(t); };
-	// auto lambda = [] (double u) -> double { return u; };
-	// auto sigma = [] (double x) -> double { return 1; };
-	// auto f = calcRightPart(lambda, u_true, sigma);
-
-	// lin_approx_t u;
-	// make_grid(u.x, 0, 1, 10);
-	// for (int i = 0; i < u.x.size(); i++)
-	// 	u.q.push_back(u_true(u.x[i], 0));
-	// 	//u.q.push_back(u_true(u.x[i], 0)-0.01);
-	// 	//u.q.push_back(1);
-
-	// /*auto result = solveFixedPointIteration(f, u_true, lambda, sigma, u, 0.001, 0, 0.001, 1000);
-	// write_iterations_information(0, result, u_true); */
-
-	// vector<double> time;
-	// make_grid(time, 0, 1, 100);
-	// time.erase(time.begin());
-	// solveByTime(f, u_true, lambda, sigma, u, time, 1e-7, 100);
-
-	// system("pause");
-	
+	init();
 
 	writeFirstInvestigation();
 
-	//writeGridInvestigation();
+	writeGridInvestigation(
+		[] (double x, double t) -> double { return x*x*x*x + t; }, "$x^4+t$", 
+		"x4_space.txt",
+		[] (double u) -> double { return u*u; }, "$u^2$"
+	);
 
-	//system("pause");
+	writeGridInvestigation(
+		[] (double x, double t) -> double { return exp(x) + t; }, "$exp(x)+t$", 
+		"expx_space.txt",
+		[] (double u) -> double { return u*u; }, "$u^2$"
+	);
+
+	writeGridInvestigationTime(
+		[] (double x, double t) -> double { return exp(x) + t*t*t; }, "$e^x+t^3$", 
+		"t3_time.txt",
+		[] (double u) -> double { return u; }, "$u$"
+	);
+
+	writeGridInvestigationTime(
+		[] (double x, double t) -> double { return exp(x) + exp(t); }, "$e^x+e^t$", 
+		"expt_time.txt",
+		[] (double u) -> double { return u; }, "$u$"
+	);
 }
-
-/* Исследования:
-	По вертикали - функция u, по горизонтали - функция лямбда, в клетках - число итераций и итоговая норма
-		Функции: 
-			3*x + t
-			2*x*x + t
-			x*x*x + t
-			x*x*x*x + t
-			exp(x) + t
-			3*x + t*t
-			3*x + t*t*t
-			3*x + exp(t)
-			3*x + sin(t)
-
-		Лямбды:
-			1
-			u
-			u*u
-			u*u + 1
-			u*u*u
-			exp(u)
-
-	Далее для какой-нибудь функции тестируется уменьшение сетки в два, четыре и т. д. раз
-
-	Тестируется неравномерное разбиение по пространству для функций:
-		x*x
-
-		сетка:
-		увеличивающаяся по коэффициенту, график для этого построить
-		f^(-1)
-
-		exp(x)
-		сетка:
-		коэфф
-		1/exp(x)
-
-		x*x*x
-
- */ 
