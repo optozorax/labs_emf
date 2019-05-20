@@ -44,6 +44,11 @@
 \newcommand{\tcell}[1]{\begin{tabular}{@{}c@{}}#1\end{tabular}}
 \newcommand{\ltcell}[1]{\begin{tabular}{@{}l@{}}#1\end{tabular}}
 
+% После обычного paragraph не работает перенос на новую строку
+\newcommand{\myparagraph}[1]{\paragraph{#1}\mbox{}\\}
+\setcounter{tocdepth}{4}
+\setcounter{secnumdepth}{4}
+
 % Пакет для списков
 \usepackage[ampersand]{easylist}
 

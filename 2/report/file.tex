@@ -3,7 +3,7 @@
 	end table=\end{tabular},
 }
 
-\mytitlepage{прикладной математики}{1}{Уравнения математической физики}{Решение эллиптических краевых задач методом конечных разностей}{ПМ-63}{Шепрут И.И.}{10}{Патрушев И.И.}{2019}
+\mytitlepage{прикладной математики}{2}{Уравнения математической физики}{Решение эллиптических краевых задач методом конечных разностей}{ПМ-63}{Шепрут И.И.}{10}{Патрушев И.И.}{2019}
 
 \section{Цель работы}
 
@@ -13,45 +13,46 @@
 
 \noindent\begin{easylist}
 \ListProperties(Hang=true, Margin2=12pt, Style2**=$\bullet$ , Hide2=2, Hide1=0)
-& Построить прямоугольную сетку в области в соответствии с заданием. Допускается использовать фиктивные узлы для сохранения регулярной структуры.
-& Выполнить конечноразностную аппроксимацию исходного уравнения в соответствии с заданием. Получить формулы для вычисления компонент матрицы A и вектора правой части b.
-& Реализовать программу решения двумерной эллиптической задачи методом конечных разностей с учетом следующих требований:
+& Выполнить конечноэлементную аппроксимацию исходного уравнения в соответствии с заданием. Получить формулы для вычисления компонент матрицы A и вектора правой части b для метода простой итерации.
+& Реализовать программу решения нелинейной задачи методом простой итерации с учетом следующих требований:
 && язык программирования С++ или Фортран;
-&& предусмотреть возможность задания неравномерных сеток по пространству, учет краевых условий в соответствии с заданием;
-&& матрицу хранить в диагональном формате, для решения СЛАУ использовать метод блочной релаксации [2, стр. 886], [3].
-& Протестировать разработанные программы на полиномах соответствующей степени.
-& Провести исследования порядка аппроксимации реализованного методов для различных задач с неполиномиальными решениями. Сравнить полученный порядок аппроксимации с теоретическим.
+&& предусмотреть возможность задания неравномерных сеток по пространству и по времени, разрывность параметров уравнения по подобластям, учет краевых условий;
+&&  матрицу хранить в ленточном формате, для решения СЛАУ использовать метод LU -разложения;
+&& предусмотреть возможность использования параметра релаксации.
+& Протестировать разработанную программу.
+& Провести исследования реализованных методов на различных зависимостях коэффициента от решения (или производной решения) в соответствии с заданием. На одних и тех же задачах сравнить по количеству итераци метод простой итерации. Исследовать скорость сходимости от параметра релаксации.
 \end{easylist}
 
-\textbf{Вариант 10:} Область имеет Ш-образную форму. Предусмотреть учет первых и третьих краевых условий.
+\textbf{Вариант 5:} уравнение $-\operatorname{div}\left(\lambda(u)\nabla u\right) + \sigma \frac{\partial u}{\partial t} = f$. Базисные функции  - линейные.
 
 \section{Анализ задачи}
 
 Необходимо решить задачу:
 
-$$ \Delta u = f(x, y) $$
+$-\operatorname{div}\left(\lambda(u)\nabla u\right) + \sigma \frac{\partial u}{\partial t} = f$
 
 Первые краевые условия записываются в виде: $ u(x, y)|_\Gamma = g_1(x, y) $, где $ g_1(x, y) $ --- известная функция. 
 
-Третьи краевые условия записываются в виде: $ u'(x, y) + A\cdot u(x, y) |_\Gamma = g_3(x, y) $ где $ g_3(x, y) $ --- известная функция. 
-
 На первом этапе решения задачи нужно построить сетку. Матрица формируется одним проходом по всем узлам, для регулярных узлов заполняется согласно пятиточечному шаблону, для прочих – в соответствии с краевыми условиями.
 
-\section{Таблицы и графики}
+\section{Исследования}
 
-Параметры:
+Далее под точностью решения будет подразумеваться $L_2$ норма между вектором $q$, полученным в ходе решения, на последнем моменте времени, и между реальным значением узлов, которые мы знаем, задавая функцию $u$. В исследованиях на порядок сходимости эта норма будет ещё делиться на число элементов, для нахождения среднего отклонения от идеального решения.
+
+\subsection{Точность для разных функций}
+
+Здесь показана точность решения и количество итераций в зависимости от функций $u(x, t)$ и $\lambda(u)$. Запускается со следующими параметрами:
 
 \noindent\begin{easylist}
 \ListProperties(Hang1=true, Margin2=12pt, Style1**=$\bullet$ , Hide1=1)
-& Сетка имеет Ш-образную форму.
-& Область сетки: $[0, 1]\times[0, 1]$.
-& Количество элементов: 20 по обеим осям.
-& Сетка равномерная.
-& Точностью решения является норма $L_2$ разности векторов истинных значений и значений, вычисленных с помощью конечно-разностной аппроксимации.
-& СЛАУ решается при помощи метода Гаусса-Зейделя с точностью $10^{-12}$, максимальным числом итераций $3000$ и параметром релаксации $1.4$.
+& $sigma = 1$.
+& $\varepsilon = 0.001$.
+& $\mathrm{iters}_{max} = 500$.
+& Функция правой части высчитывается автоматически.
+& Сетка по пространству равномерная: $(1, 1.1, \cdots, 1.9, 2)$. Сетка по времени равномерная: $(0, 0.1, \cdots, 0.9, 1)$.
+& Начальное приближение: для функций $u$, линейных по $t$ начальное приближение --- $(1, 1, ...)$.
+& Для функций $u$, нелинейных по $t$ начальное приближение в момент $t=0$ --- $(u(1, 0), u(1.1, 0), \cdots, u(1.9, 0), u(2, 0))$, то есть истинное решение.
 \end{easylist}
-
-\subsection{Точность для разных функций}
 
 \begin{center}
 \noindent\pgfplotstabletypeset[
@@ -64,7 +65,7 @@ $$ \Delta u = f(x, y) $$
 	columns/$u^3$/.style={string type},
 	columns/$u^4$/.style={string type},
 	columns/$e^u$/.style={string type},
-	columns/sinu/.style={string type, column type/.add={}{|},},
+	columns/sinu/.style={string type, column name={$\sin u$}, column type/.add={}{|},},
 	every head row/.style={before row=\hline,after row=\hline\hline}, 
 	every last row/.style={after row=\hline},
 	column type/.add={|}{},
@@ -72,15 +73,45 @@ $$ \Delta u = f(x, y) $$
 ]{first.txt}
 \end{center}
 
-\subsection{Зависимость точности от размера сетки}
+\subsection{Зависимость точности от нелинейной сетки}
+
+\subsubsection{Функции нелинейной сетки}
+
+В ходе выполнения лабораторной работы были обнаружены функции, позволяющие легко задавать неравномерную сетку, сгущающуюяся к одному из концов.
+
+Если у нас задано начало сетки --- $a$, конец --- $b$, а количество элементов $n$, тогда сетку можно задать следующим образом:
+
+$ x_i = a + m\left(\frac{i}{n}\right) \cdot (b-a), i=\underline{0, n}$, 
+
+где $m(x)$ --- некоторая функция, задающая неравномерную сетку. При этом $x$ обязаны быть принадлежать области $[0, 1]$, а функция $m$ возвращать значения из той же области, и при этом быть строго монотонной на этом участке. Тогда гарантируется условие на сетке, что $x_j \leqslant x_i$ при $j \leqslant i$. 
+
+\textit{Пример:} при $m(x) = x$, сетка становится равномерной.
+
+Найденные функции:
+
+$$ m_{1, t}(x) = x^t $$
+
+$$ m_{2, t}(x) = x^\frac{1}{t} $$
+
+$$ m_{3, t}(x) = \frac{t^x-1}{t-1} $$
+
+$$ m_{4, t}(x) = \frac{\frac{1}{t^x}}{\frac{1}{x}-1} $$
+
+Что интересно, эти функции вырождаются в $x$ при $t=1$, а при $t=0$, они вырождаются в сетку, полностью находящуюся на одном из концов: 1, 3 фукнции стремятся к концу $b$; а функции 2, 4 стремятся к концу $a$. 1 и 2 функции симметричны, как 3 и 4.
+
+Таким образом, можно исследовать различные неравномерные сетки на итоговую точность и число итераций, изменяя параметр от $0$ до $1$.
+
+\subsubsection{Описание исследований}
 
 Параметры остаются прежними, с небольшими изменениями:
 
-% \noindent\begin{easylist}
-% \ListProperties(Hang1=true, Margin2=12pt, Style1**=$\bullet$ , Hide1=1)
-% & Количество элементов по обеим осям является переменной величиной.
-% & Для неполиномиальной функции $e^{x^3+yx^2}$.
-% \end{easylist}
+\noindent\begin{easylist}
+\ListProperties(Hang1=true, Margin2=12pt, Style1**=$\bullet$ , Hide1=1)
+& $\mathrm{iters}_{max} = 100$.
+& Сетка по пространству неравномерная, если исследование происходит по сетке пространству, и равномерная, если исследование происходит по сетке времени.
+\end{easylist}
+
+Исследуется скорость и качество сходимости в зависимости от параметра неравномерной сетки.
 
 \newcommand{\graphgrid}[1]{
 \noindent\begin{tikzpicture}
@@ -88,7 +119,7 @@ $$ \Delta u = f(x, y) $$
 \addplot[red, no markers] table [skip first n=1, y=r1, x=t]{#1.txt};
 \addplot[blue, no markers] table [skip first n=1, y=r2, x=t]{#1.txt};
 \addplot[black, no markers] table [skip first n=1, y=ru, x=t]{#1.txt};
-\legend{$x^t$,$x^\frac{1}{t}$,$x$}
+\legend{$m_{1, t}$,$m_{2, t}$,$x$}
 \end{semilogyaxis}
 \end{tikzpicture}
 
@@ -97,7 +128,7 @@ $$ \Delta u = f(x, y) $$
 \addplot[green, no markers] table [skip first n=1, y=r3, x=t]{#1.txt};
 \addplot[orange, no markers] table [skip first n=1, y=r4, x=t]{#1.txt};
 \addplot[black, no markers] table [skip first n=1, y=ru, x=t]{#1.txt};
-\legend{$\frac{t^x-1}{t-1}$,$\frac{\frac{1}{t}^x-1}{\frac{1}{t}-1}$,$x$}
+\legend{$m_{3, t}$,$m_{4, t}$,$x$}
 \end{semilogyaxis}
 \end{tikzpicture}
 
@@ -106,7 +137,7 @@ $$ \Delta u = f(x, y) $$
 \addplot[red, no markers] table [skip first n=1, y=i1, x=t]{#1.txt};
 \addplot[blue, no markers] table [skip first n=1, y=i2, x=t]{#1.txt};
 \addplot[black, no markers] table [skip first n=1, y=iu, x=t]{#1.txt};
-\legend{$x^t$,$x^\frac{1}{t}$,$x$}
+\legend{$m_{1, t}$,$m_{2, t}$,$x$}
 \end{semilogyaxis}
 \end{tikzpicture}
 
@@ -115,7 +146,7 @@ $$ \Delta u = f(x, y) $$
 \addplot[green, no markers] table [skip first n=1, y=i3, x=t]{#1.txt};
 \addplot[orange, no markers] table [skip first n=1, y=i4, x=t]{#1.txt};
 \addplot[black, no markers] table [skip first n=1, y=iu, x=t]{#1.txt};
-\legend{$\frac{t^x-1}{t-1}$,$\frac{\frac{1}{t}^x-1}{\frac{1}{t}-1}$,$x$}
+\legend{$m_{3, t}$,$m_{4, t}$,$x$}
 \end{semilogyaxis}
 \end{tikzpicture}
 }
@@ -128,7 +159,7 @@ $$ \Delta u = f(x, y) $$
 \addplot[green, no markers] table [skip first n=1, y=r3, x=t]{#1.txt};
 \addplot[orange, no markers] table [skip first n=1, y=r4, x=t]{#1.txt};
 \addplot[black, no markers] table [skip first n=1, y=ru, x=t]{#1.txt};
-\legend{$x^t$,$x^\frac{1}{t}$,$\frac{t^x-1}{t-1}$,$\frac{\frac{1}{t}^x-1}{\frac{1}{t}-1}$,$x$}
+\legend{$m_{1, t}$,$m_{2, t}$,$m_{3, t}$,$m_{4, t}$,$x$}
 \end{semilogyaxis}
 \end{tikzpicture}
 
@@ -139,18 +170,66 @@ $$ \Delta u = f(x, y) $$
 \addplot[green, no markers] table [skip first n=1, y=i3, x=t]{#1.txt};
 \addplot[orange, no markers] table [skip first n=1, y=i4, x=t]{#1.txt};
 \addplot[black, no markers] table [skip first n=1, y=iu, x=t]{#1.txt};
-\legend{$x^t$,$x^\frac{1}{t}$,$\frac{t^x-1}{t-1}$,$\frac{\frac{1}{t}^x-1}{\frac{1}{t}-1}$,$x$}
+\legend{$m_{1, t}$,$m_{2, t}$,$m_{3, t}$,$m_{4, t}$,$x$}
 \end{semilogyaxis}
 \end{tikzpicture}
 }
 
+\subsubsection{Сетка по пространству}
+
+В данных исследованиях неравномерность применяется к сетке по пространству.
+
+\myparagraph{u = x4 + t}
+
+Исследуется функция $u(x, t) = x^4 + t$, при $\lambda(u) = u*u$.
+
 \graphgrid{x4_space}
+
+\myparagraph{u = exp(x) + t}
+
+Исследуется функция $u(x, t) = e^x + t$, при $\lambda(u) = u*u$.
 
 \graphgrid{expx_space}
 
+\subsubsection{Сетка по времени}
+
+В данных исследованиях неравномерность применяется к сетке по времени.
+
+\myparagraph{u = exp(x) + t3}
+
+Исследуется функция $u(x, t) = e^x + t^3$, при $\lambda(u) = u$.
+
 \graphgridtime{t3_time}
 
+\myparagraph{u = exp(x) + exp(t)}
+
+Исследуется функция $u(x, t) = e^x + e^t$, при $\lambda(u) = u$.
+
 \graphgridtime{expt_time}
+
+\subsection{Точность в зависимости от размера сетки}
+
+\subsubsection{Сетка по пространству}
+
+\noindent\begin{tikzpicture}
+\begin{semilogyaxis}[xlabel=Количество элементов сетки,ylabel=Точность решения,width=\textwidth, height=6cm]
+\addplot[red, no markers] table [skip first n=1, y=residual, x=size]{expx_expt_size_space.txt};
+\addplot[black, smooth, domain=3:202] {0.0255*x^(-0.5)};
+\addplot[blue, smooth, domain=3:202] {0.0255*5^(0.5)*x^(-1)};
+\legend{Точность решения,$0.0255\cdot x^{-0.5}$,$0.0255\cdot \sqrt{5}\cdot x^{-1}$}
+\end{semilogyaxis}
+\end{tikzpicture}
+
+\subsubsection{Сетка по времени}
+
+\noindent\begin{tikzpicture}
+\begin{semilogyaxis}[xlabel=Количество элементов сетки,ylabel=Точность решения,width=\textwidth, height=6cm]
+\addplot[red, no markers] table [skip first n=1, y=residual, x=size]{expx_expt_size_time.txt};
+\addplot[black, smooth, domain=3:202] {0.08*x^(-1)};
+\addplot[blue, smooth, domain=3:202] {0.08*5*x^(-2)};
+\legend{Точность решения,$0.08\cdot x^{-1}$,$0.08\cdot 5\cdot x^{-2}$}
+\end{semilogyaxis}
+\end{tikzpicture}
 
 
 % \subsection{Зависимость точности от параметра разрядки неравномерной сетки}
@@ -181,7 +260,7 @@ $$ \Delta u = f(x, y) $$
 % \subsubsection{$3x^2+y^2$}
 % \inputgraph{1}
 
-% \subsubsection{$x^3+xy^2+y^3$}
+% \subsubsection{$x^3+xy^2+y^3$}s
 % \inputgraph{2}
 
 % \subsubsection{$x^4+y^4$}

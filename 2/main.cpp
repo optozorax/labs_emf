@@ -470,9 +470,10 @@ vector<pair<Function1D, string>> lambdas;
 vector<Function2D> moves;
 auto sigma = [] (double x) -> double { return 1; };
 
-double a = 1, b = 2, n = 20; // Характеристики сетки по пространству
-double at = 0, bt = 1, nt = 20; // Характеристики сетки по времени
+double a = 1, b = 2, n = 10; // Характеристики сетки по пространству
+double at = 0, bt = 1, nt = 10; // Характеристики сетки по времени
 double na = 0, nb = 1, nn = 1000; // Характеристики сетки по параметру t, в зависимости от которого меняются неравномерные сетки
+int sa = 5, sb = 200; // Характеристики сетки по размеру
 
 //-----------------------------------------------------------------------------
 void init() {
@@ -555,8 +556,6 @@ void writeGridInvestigation(
 	// Делаем равномерную сетку по времени
 	vector<double> time;
 	make_grid(time, at, bt, nt);
-	time.erase(time.begin());
-	time.push_back(time[1]-time[0] + bt);
 
 	pair<int, double> resu = {-1, 0};
 
@@ -664,6 +663,69 @@ void writeGridInvestigationTime(
 }
 
 //-----------------------------------------------------------------------------
+void writeGridInvestigationSize(
+	const Function2D& u_true, string su,
+	const string& file,
+	const Function1D& lambda, string slambda) {
+	ofstream fout(file);
+	fout << "u = " << su << ", lambda = " << slambda << endl;
+
+	// Делаем равномерную сетку по времени
+	vector<double> time;
+	make_grid(time, at, bt, nt);
+
+	fout << "size\titerations\tresidual" << endl;
+	for (int size = sa; size < sb; ++size) {
+		lin_approx_t u;
+		make_grid(u.x, a, b, size);
+		for (int j = 0; j < u.x.size(); j++) u.q.push_back(u_true(u.x[j], at));
+		lin_approx_t u_truly_approx = calcTrulyApprox(u.x, u_true, bt);
+
+		auto result = solveByTime(calcRightPart(lambda, u_true, sigma), u_true, lambda, sigma, u, time, 0.001, 100);
+
+		int itersum = 0; for (auto& k : result) itersum += k.iterations;
+		double residual = norm(u_truly_approx.q, result.back().answer.q);
+
+		residual /= size; // Важно! Так как если не разделить, то расстояние между каждым узлом будет в итоге уменьшаться, но раз мы их делаем всё больше и больше, то в сумме оно будет увеличиваться, и в итоге точность будет расти.
+
+		fout << size << "\t" << itersum << "\t" << residual << endl;
+	}
+
+	fout.close();
+}
+
+//-----------------------------------------------------------------------------
+void writeGridInvestigationSizeTime(
+	const Function2D& u_true, string su,
+	const string& file,
+	const Function1D& lambda, string slambda) {
+	ofstream fout(file);
+	fout << "u = " << su << ", lambda = " << slambda << endl;
+
+	lin_approx_t u;
+	make_grid(u.x, a, b, n);
+	for (int j = 0; j < u.x.size(); j++) u.q.push_back(u_true(u.x[j], at));
+	lin_approx_t u_truly_approx = calcTrulyApprox(u.x, u_true, bt);
+
+	fout << "size\titerations\tresidual" << endl;
+	for (int size = sa; size < sb; ++size) {
+		vector<double> time;
+		make_grid(time, at, bt, size);
+
+		auto result = solveByTime(calcRightPart(lambda, u_true, sigma), u_true, lambda, sigma, u, time, 0.001, 100);
+
+		int itersum = 0; for (auto& k : result) itersum += k.iterations;
+		double residual = norm(u_truly_approx.q, result.back().answer.q);
+
+		residual /= size; // Важно! Так как если не разделить, то расстояние между каждым узлом будет в итоге уменьшаться, но раз мы их делаем всё больше и больше, то в сумме оно будет увеличиваться, и в итоге точность будет расти.
+
+		fout << size << "\t" << itersum << "\t" << residual << endl;
+	}
+
+	fout.close();
+}
+
+//-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 
@@ -693,6 +755,18 @@ int main() {
 	writeGridInvestigationTime(
 		[] (double x, double t) -> double { return exp(x) + exp(t); }, "$e^x+e^t$", 
 		"expt_time.txt",
+		[] (double u) -> double { return u; }, "$u$"
+	);
+
+	writeGridInvestigationSize(
+		[] (double x, double t) -> double { return exp(x) + exp(t); }, "$e^x+e^t$", 
+		"expx_expt_size_space.txt",
+		[] (double u) -> double { return u; }, "$u$"
+	);
+
+	writeGridInvestigationSizeTime(
+		[] (double x, double t) -> double { return exp(x) + exp(t); }, "$e^x+e^t$", 
+		"expx_expt_size_time.txt",
 		[] (double u) -> double { return u; }, "$u$"
 	);
 }
