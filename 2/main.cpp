@@ -533,7 +533,7 @@ void writeFirstInvestigation() {
 		for (auto& j : lambdas) {
 			auto lambda = j.first;
 
-			auto result = solveByTime(calcRightPart(lambda, u_true, sigma), u_true, lambda, sigma, u, time, 0.001, 500);
+			auto result = solveByTime(calcRightPart(lambda, u_true, sigma), u_true, lambda, sigma, u, time, 1e-7, 500);
 
 			int itersum = 0;
 			for (auto& k : result) itersum += k.iterations;
