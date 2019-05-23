@@ -210,6 +210,16 @@ lin_approx_t calcTrulyApprox(const vector<double>& grid, const Function2D& u_tru
 }
 
 //-----------------------------------------------------------------------------
+lin_approx_t calcTrulyApprox(const vector<double>& grid, const Function1D& u_true) {
+	lin_approx_t u_truly_approx;
+	u_truly_approx.x = grid;
+	u_truly_approx.q = grid;
+	for (int i = 0; i < u_truly_approx.x.size(); i++)
+		u_truly_approx.q[i] = u_true(u_truly_approx.x[i]);
+	return u_truly_approx;
+}
+
+//-----------------------------------------------------------------------------
 double norm(const vector<double>& a, const vector<double>& b) {
 	assert(a.size() == b.size());
 	double sum = 0;
@@ -222,7 +232,7 @@ double norm(const vector<double>& a, const vector<double>& b) {
 double norm(const Function1D& f, const lin_approx_t& b) {
 	vector<double> grid;
 	make_grid(grid, b.middle(0), b.middle(b.x.size()-1), 100);
-	integral_gauss3(grid, [f, &b] (double x) -> double {
+	return integral_gauss3(grid, [f, &b] (double x) -> double {
 		return fabs(f(x) - b.value(x));
 	});
 }
