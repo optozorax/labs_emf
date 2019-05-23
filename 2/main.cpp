@@ -104,7 +104,7 @@ Function2D calcRightPart(
 			return lambda(u(x, t)) * ux(x);
 		};
 		auto div = calcFirstDerivative(bind(lambda_grad, _1, t));
-		return -div(x) + sigma(x) * ut(x);
+		return -div(x) + sigma(x) * ut(t);
 	};
 }
 
