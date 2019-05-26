@@ -231,8 +231,25 @@ double norm(const vector<double>& a, const vector<double>& b) {
 //-----------------------------------------------------------------------------
 double norm(const Function1D& f, const lin_approx_t& b) {
 	vector<double> grid;
-	make_grid(grid, b.middle(0), b.middle(b.x.size()-1), 100);
+	make_grid(grid, b.middle(0), b.middle(b.x.size()-1), b.size() * 10);
 	return integral_gauss3(grid, [f, &b] (double x) -> double {
 		return fabs(f(x) - b.value(x));
 	});
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+Function1D getMove0(double t, double coef) {
+	return getMove1(1.0/t, coef);
+}
+
+//-----------------------------------------------------------------------------
+Function1D getMove1(double t, double coef) {
+	t = pow(t, coef);
+	return [t] (double x) -> double {
+		return (1.0-pow(t, x))/(1.0-t);
+	};
 }

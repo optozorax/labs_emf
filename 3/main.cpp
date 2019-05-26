@@ -1,4 +1,5 @@
 #include "../2/lib.h"
+#include <diagonal.h>
 
 struct Constants
 {
@@ -39,7 +40,10 @@ double calcPIntegral(int i, int j, const lin_approx_t& u, const Constants& c) {
 		return c.lambda * u.basic_grad(x, i) * u.basic_grad(x, j) - c.omega * c.omega * c.xi * u.basic(x, i) * u.basic(x, j);
 	};
 	vector<double> X;
-	make_grid(X, min(u.left(i), u.left(j)), max(u.right(i), u.right(j)), 20);
+	if (i == j)
+		make_grid(X, u.left(i), u.right(i), 10);
+	else
+		make_grid(X, min(u.middle(i), u.middle(j)), min(u.right(i), u.right(j)), 10);
 	return integral_gauss3(X, f);
 }
 
@@ -49,13 +53,16 @@ double calcCIntegral(int i, int j, const lin_approx_t& u, const Constants& c) {
 		return u.basic(x, i) * u.basic(x, j);
 	};
 	vector<double> X;
-	make_grid(X, min(u.left(i), u.left(j)), max(u.right(i), u.right(j)), 20);
+	if (i == j)
+		make_grid(X, u.left(i), u.right(i), 10);
+	else
+		make_grid(X, min(u.middle(i), u.middle(j)), min(u.right(i), u.right(j)), 10);
 	return c.omega * c.sigma * integral_gauss3(X, f);
 }
 
 //-----------------------------------------------------------------------------
-Matrix calcLocalMatrix(int i, int j, const lin_approx_t& u, const Constants& c, bool isCalcLeftDown) {
-	Matrix result(4, 4);
+EMatrix calcLocalMatrix(int i, int j, const lin_approx_t& u, const Constants& c, bool isCalcLeftDown) {
+	EMatrix result(4, 4);
 	double p11 = calcPIntegral(i, i, u, c);
 	double c11 = calcCIntegral(i, i, u, c);
 	double p12 = calcPIntegral(i, j, u, c);
@@ -74,8 +81,8 @@ Matrix calcLocalMatrix(int i, int j, const lin_approx_t& u, const Constants& c, 
 }
 
 //-----------------------------------------------------------------------------
-Matrix calcGlobalMatrix(const lin_approx_t& u, const Constants& c) {
-	Matrix result(u.size() * 2, u.size() * 2);
+EMatrix calcGlobalMatrix(const lin_approx_t& u, const Constants& c) {
+	EMatrix result(u.size() * 2, u.size() * 2);
 	result.fill(0);
 
 	for (int i = 0; i < u.size()-1; ++i) {
@@ -91,14 +98,14 @@ Matrix calcGlobalMatrix(const lin_approx_t& u, const Constants& c) {
 }
 
 //-----------------------------------------------------------------------------
-Vector calcB(
+template<class V>
+V calcB(
 	const lin_approx_t& u, 
 	const Constants& c, 
 	const Function1D& fs,
 	const Function1D& fc
 ) {
-	Vector result(u.size() * 2);
-	result.fill(0);
+	V result(u.size() * 2);
 	for (int i = 0; i < u.size(); ++i) {
 		auto funs = [&] (double x) -> double { return fs(x) * u.basic(x, i); };
 		auto func = [&] (double x) -> double { return fc(x) * u.basic(x, i); };
@@ -111,10 +118,11 @@ Vector calcB(
 }
 
 //-----------------------------------------------------------------------------
+template<class V>
 void setAnswer(
 	lin_approx_t& us, 
 	lin_approx_t& uc,
-	const Vector& result 
+	const V& result 
 ) {
 	us.q.resize(us.size());
 	uc.q.resize(uc.size());
@@ -125,9 +133,31 @@ void setAnswer(
 }
 
 //-----------------------------------------------------------------------------
+MatrixDiagonal calcGlobalMatrixDiag(const lin_approx_t& u, const Constants& c) {
+	Diagonal d(u.size() * 2);
+	vector<int> format = {0, -3, -2, -1, 1, 2, 3};
+	MatrixDiagonal result(u.size() * 2, format);
+	for (int i = 0; i < u.size()-1; ++i) {
+		auto l = calcLocalMatrix(i, i+1, u, c, i == u.size()-2);
+		for (int x = 0; x < l.rows(); ++x) {
+			for (int y = 0; y < l.cols(); ++y) {
+				int line = i*2 + x;
+				int row = i*2 + y;
+				int diag = d.calcDiag_byLR(line, row);
+				int pos = d.calcPos_byLR(line, row);
+				diag = distance(format.begin(), find(format.begin(), format.end(), diag));
+				result.begin(diag)[pos] = l(x, y);
+			}
+		}
+	}
+
+	return result;
+}
+
+//-----------------------------------------------------------------------------
 void setFirstBoundaryConditions(
-	Matrix& A,
-	Vector& b,
+	EMatrix& A,
+	EVector& b,
 	const Function1D& us_true,
 	const Function1D& uc_true,
 	const lin_approx_t& u
@@ -141,7 +171,31 @@ void setFirstBoundaryConditions(
 
 	int end = A.cols()-1;
 	clear_line(end-1); A(end-1, end-1) = 1; b(end-1) = us_true(u.middle(u.size()-1));
-	clear_line(end); A(end, end) = 1; b(end) = uc_true(u.middle(u.size()-1));
+	clear_line(end);   A(end, end) = 1;     b(end) = uc_true(u.middle(u.size()-1));
+}
+
+//-----------------------------------------------------------------------------
+void setFirstBoundaryConditions(
+	MatrixDiagonal& A,
+	Vector& b,
+	const Function1D& us_true,
+	const Function1D& uc_true,
+	const lin_approx_t& u
+) {
+	auto clear_line = [&] (int line) {
+		matrix_diagonal_line_iterator it(A.dimension(), A.getFormat(), false);
+		for (; !it.isEnd(); ++it) 
+			for (; !it.isLineEnd(); ++it)
+				if (it.i == line)
+					A.begin(it.dn)[it.di] = 0;
+	};
+
+	clear_line(0); A.begin(0)[0] = 1; b(0) = us_true(u.middle(0));
+	clear_line(1); A.begin(0)[1] = 1; b(1) = uc_true(u.middle(0));
+
+	int end = A.dimension()-1;
+	clear_line(end-1); A.begin(0)[end-1] = 1; b(end-1) = us_true(u.middle(u.size()-1));
+	clear_line(end);   A.begin(0)[end] = 1;   b(end) = uc_true(u.middle(u.size()-1));
 }
 
 //-----------------------------------------------------------------------------
@@ -163,17 +217,52 @@ int main() {
 	auto fc = calcRightPartC(us_true, uc_true, c);
 
 	lin_approx_t us, uc;
-	make_grid(us.x, 0, 1, 5);
+	make_grid(us.x, 0, 1, 50);
 	uc.x = us.x;
 
-	auto A = calcGlobalMatrix(us, c);
-	auto b = calcB(us, c, fs, fc);
+	/*auto A = calcGlobalMatrix(us, c);
+	auto b = calcB<EVector>(us, c, fs, fc);
 	setFirstBoundaryConditions(A, b, us_true, uc_true, us);
-	Eigen::JacobiSVD<Matrix> svd(A, Eigen::ComputeThinU | Eigen::ComputeThinV);
-	Vector x = svd.solve(b);
-	//cout << A << endl << b << endl << x << endl;
+	
+	Eigen::JacobiSVD<EMatrix> svd(A, Eigen::ComputeThinU | Eigen::ComputeThinV);
+	EVector x = svd.solve(b);
+	
+	setAnswer(us, uc, x);*/
 
-	setAnswer(us, uc, x);
+	auto A1 = calcGlobalMatrixDiag(us, c);
+	auto b1 = calcB<Vector>(us, c, fs, fc);
+	setFirstBoundaryConditions(A1, b1, us_true, uc_true, us);
+	/*Matrix denseA(A.cols(), A.rows());
+	for (int i = 0; i < A.cols(); i++) {
+		for (int j = 0; j < A.rows(); j++) {
+			denseA(i, j) = A(i, j);
+		}
+	}
+	MatrixDiagonal A2(denseA);*/
+
+	Vector x1;
+	SolverSLAE_Iterative solver;
+	solver.epsilon = 1e-7;
+	solver.isLog = false;
+	solver.maxIterations = 5000;
+	solver.start = Vector(us.size() * 2, 0);
+	solver.w = 0.8;
+	solver.seidel(A1, b1, x1);
+
+	setAnswer(us, uc, x1);
+
+	Vector b2;
+	mul(A1, x1, b2);
+	b2.negate();
+	sum(b1, b2, b2);
+	cout << "residual slae: " << calcNorm(b2) << endl;
+
+	/*Matrix dense; A1.toDenseMatrix(dense);
+	cout << A << endl << b << endl;
+	dense.save(cout); cout << endl;
+	b1.save(cout); cout << endl;
+	cout << x << endl;
+	x1.save(cout); cout << endl;*/
 
 	double residual = norm(us_true, us) + norm(uc_true, uc);
 

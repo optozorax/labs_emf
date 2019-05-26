@@ -3,14 +3,17 @@
 #include <functional>
 #include <vector>
 #include <iostream>
+#define real realeigen
 #include <Eigen/Dense>
+#undef real
+
 
 using namespace std;
 
 //-----------------------------------------------------------------------------
 // Типы данных
-typedef Eigen::MatrixXd Matrix;
-typedef Eigen::VectorXd Vector;
+typedef Eigen::MatrixXd EMatrix;
+typedef Eigen::VectorXd EVector;
 
 typedef function<double(double)> Function1D;
 typedef function<double(double, double)> Function2D;
@@ -79,3 +82,7 @@ lin_approx_t calcTrulyApprox(const vector<double>& grid, const Function2D& u_tru
 lin_approx_t calcTrulyApprox(const vector<double>& grid, const Function1D& u_true);
 double norm(const vector<double>& a, const vector<double>& b); /// Считает норму между двумя векторами
 double norm(const Function1D& f, const lin_approx_t& b); /// Считает норму между функцией и линейной аппроксимацией функции
+
+//-----------------------------------------------------------------------------
+Function1D getMove0(double t, double coef = 10); // Получить функцию смещения координат, которая стремится к 0 при t стремящемся к нулю. coef - степень, в которую возведется t, чтобы получить более лучшее распределение элементов, находящихся рядом с 0
+Function1D getMove1(double t, double coef = 10); // Аналогично предыдущему, только функция стремится к 1
