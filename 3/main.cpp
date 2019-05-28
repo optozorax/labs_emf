@@ -342,10 +342,13 @@ pair<int, double> los2() {
 }
 
 //-----------------------------------------------------------------------------
-pair<int, double> gmres_lu() {
+pair<int, double> bsg_stab_lu() {
 	lu_decompose(a, lu);
 	x.clear();
 	x.resize(n, 0);
+	vector<double> r0(n, 0);
+	vector<double> y = x;
+	mul(a, y);
 
 	r = x;
 	mul(a, r);
@@ -356,31 +359,39 @@ pair<int, double> gmres_lu() {
 	z = r;
 	mul_u_invert(lu, z);
 
-	p = z;
-	mul(a, p);
-	mul_l_invert(lu, p);
+	r0 = r; // r0 - это r0
+	p = r;
 
 	double flen = sqrt(f*f);
 	double residual;
 
 	int i = 0;
 	while (true) {
-		double pp = p*p;
-		double alpha = (p*r) / pp;
-		for (int i = 0; i < n; ++i) {
-			x[i] += alpha * z[i];
-			r[i] -= alpha * p[i];
-		}
-		t1 = r;
+		t1 = z;
 		mul_u_invert(lu, t1);
-		t2 = t1;
+		mul(a, t1);
+		mul_l_invert(lu, t1);
+ 		double rr0 = r*r0;
+		double alpha = (rr0) / (t1*r0);
+		for (int i = 0; i < n; ++i)
+			p[i] = r[i] - alpha * t1[i];
+
+		t2 = p;
+		mul_u_invert(lu, t2);
 		mul(a, t2);
 		mul_l_invert(lu, t2);
-		double beta = -(p*t2) / pp;
+		double gamma = (p*t2) / (t2*t2);
 		for (int i = 0; i < n; ++i) {
-			z[i] = t1[i] + beta * z[i];
-			p[i] = t2[i] + beta * p[i];
+			y[i] = y[i] + alpha * z[i] + gamma * p[i];
+			r[i] = p[i] - gamma * t2[i];
 		}
+
+		double beta = alpha*(r*r0)/(gamma * rr0);
+		for (int i = 0; i < n; ++i)
+			z[i] = r[i] + beta * z[i] - beta * gamma * t1[i];
+		x = y;
+		mul_u_invert(lu, x);
+
 		residual = length(r) / flen;
 		i++;
 
@@ -414,7 +425,8 @@ bool is_log;
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 
 struct Constants
 {
@@ -449,6 +461,8 @@ Function1D calcRightPartC(
 	};
 }
 
+const int count_integral = 50;
+
 //-----------------------------------------------------------------------------
 double calcPIntegral(int i, int j, const lin_approx_t& u, const Constants& c) {
 	auto f = [&] (double x) -> double {
@@ -456,9 +470,9 @@ double calcPIntegral(int i, int j, const lin_approx_t& u, const Constants& c) {
 	};
 	vector<double> X;
 	if (i == j)
-		make_grid(X, u.left(i), u.right(i), 10);
+		make_grid(X, u.left(i), u.right(i), count_integral);
 	else
-		make_grid(X, min(u.middle(i), u.middle(j)), min(u.right(i), u.right(j)), 10);
+		make_grid(X, min(u.middle(i), u.middle(j)), min(u.right(i), u.right(j)), count_integral);
 	return integral_gauss3(X, f);
 }
 
@@ -469,9 +483,9 @@ double calcCIntegral(int i, int j, const lin_approx_t& u, const Constants& c) {
 	};
 	vector<double> X;
 	if (i == j)
-		make_grid(X, u.left(i), u.right(i), 10);
+		make_grid(X, u.left(i), u.right(i), count_integral);
 	else
-		make_grid(X, min(u.middle(i), u.middle(j)), min(u.right(i), u.right(j)), 10);
+		make_grid(X, min(u.middle(i), u.middle(j)), min(u.right(i), u.right(j)), count_integral);
 	return c.omega * c.sigma * integral_gauss3(X, f);
 }
 
@@ -558,7 +572,7 @@ V calcB(
 		auto funs = [&] (double x) -> double { return fs(x) * u.basic(x, i); };
 		auto func = [&] (double x) -> double { return fc(x) * u.basic(x, i); };
 		vector<double> X;
-		make_grid(X, u.left(i), u.right(i), 10);
+		make_grid(X, u.left(i), u.right(i), count_integral);
 		result(i*2 + 0) = integral_gauss3(X, funs);
 		result(i*2 + 1) = integral_gauss3(X, func);
 	}
@@ -699,7 +713,7 @@ int main() {
 	auto fc = calcRightPartC(us_true, uc_true, c);
 
 	lin_approx_t us, uc;
-	make_grid(us.x, 1, 2, 50000);
+	make_grid(us.x, 1, 2, 500000);
 	uc.x = us.x;
 
 	/*auto A = calcGlobalMatrix(us, c);
@@ -725,7 +739,8 @@ int main() {
 	slau.x.resize(slau.n);
 	slau.t1.resize(slau.n);
 	slau.t2.resize(slau.n);
-	slau.los2();
+	//slau.los2();
+	slau.bsg_stab_lu();
 	setAnswer(us, uc, to(slau.x));
 
 	/*auto A1 = calcGlobalMatrixDiag(us, c);
