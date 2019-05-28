@@ -1,5 +1,420 @@
+#include <iomanip>
+
 #include "../2/lib.h"
 #include <diagonal.h>
+
+//-----------------------------------------------------------------------------
+double operator*(const vector<double>& a, const vector<double>& b) {
+	double sum = 0;
+	for (int i = 0; i < a.size(); ++i)
+		sum += a[i] * b[i];
+	return sum;
+}
+
+//-----------------------------------------------------------------------------
+double length(const vector<double>& mas) {
+	return sqrt(mas*mas);
+}
+
+//-----------------------------------------------------------------------------
+vector<double> to(const Vector& a) {
+	vector<double> result(a.size());
+	for (int i = 0; i < a.size(); ++i)
+		result[i] = a(i);
+	return result;
+}
+
+//-----------------------------------------------------------------------------
+Vector to(const vector<double>& a) {
+	Vector result(a.size());
+	for (int i = 0; i < a.size(); ++i)
+		result(i) = a[i];
+	return result;
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+struct matrix
+{
+	int n;
+	vector<double> d, l, u;
+	vector<int> i, j;
+
+	void init(int n1) {
+		n = n1;
+		d.clear();
+		l.clear();
+		u.clear();
+		i.clear();
+		j.clear();
+		d.resize(n);
+		i.resize(n+1, 0);
+	}
+
+	void toDense(Matrix& m) const {
+		m.resize(n, n, 0);
+		for (int i = 0; i < n; ++i) {
+			m(i, i) = d[i];
+			for (int j = 0; j < lineElemCount(i); ++j) {
+				m(i, lineElemRow(i, j)) = l[lineElemStart(i) + j];
+				m(lineElemRow(i, j), i) = u[lineElemStart(i) + j];
+			}
+		}
+	}
+
+	int lineElemStart(int line) const { 
+		return i[line]; 
+	}
+	int lineStart(int line) const { 
+		return j[lineElemStart(line)]; 
+	}
+	int lineSize(int line) const { 
+		return line - lineStart(line); 
+	} 
+	int lineElemRow(int line, int elem) const { 
+		return j[lineElemStart(line) + elem]; 
+	}
+	int lineElemCount(int line) const { 
+		return i[line+1]-i[line]; 
+	}
+};
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+
+void lu_decompose(const matrix& a, matrix& lu) {
+	lu = a;
+	for (int i = 0; i < lu.n; ++i) {
+		// Заполняем нижний треугольник
+		int line_start = lu.lineElemStart(i);
+		int line_end = lu.lineElemStart(i+1);
+		for (int j = line_start; j < line_end; ++j) {
+			double sum = 0;
+
+			int row = lu.j[j];
+			int row_start = lu.lineElemStart(row);
+			int row_end = lu.lineElemStart(row+1);
+
+			int kl = line_start;
+			int ku = row_start;
+			
+			while (kl < j && ku < row_end) {
+				if (lu.j[kl] == lu.j[ku]) { // Совпадают столбцы
+					sum += lu.l[kl] * lu.u[ku];
+					ku++;
+					kl++;
+				} else if (lu.j[kl] < lu.j[ku]) {
+					kl++;
+				} else {
+					ku++;
+				}
+			}
+
+			lu.l[j] = (a.l[j] - sum) / lu.d[row];
+		}
+
+		// Заполняем верхний треугольник
+		int row_start = lu.lineElemStart(i);
+		int row_end = lu.lineElemStart(i+1);
+		for (int j = line_start; j < line_end; ++j) {
+			double sum = 0;
+			
+			int line = lu.j[j];
+			int line_start = lu.lineElemStart(line);
+			int line_end = lu.lineElemStart(line+1);
+
+			int kl = line_start;
+			int ku = row_start;
+			
+			while (kl < line_end && ku < j) {
+				if (lu.j[kl] == lu.j[ku]) { // Совпадают столбцы
+					sum += lu.l[kl] * lu.u[ku];
+					ku++;
+					kl++;
+				} else if (lu.j[kl] < lu.j[ku]) {
+					kl++;
+				} else {
+					ku++;
+				}
+			}
+
+			lu.u[j] = (a.u[j] - sum) / lu.d[line];
+		}
+
+		// Расчитываем диагональный элемент
+		double sum = 0;
+		int line_row_start = lu.lineElemStart(i);
+		int line_row_end = lu.lineElemStart(i+1);
+		for (int j = line_row_start; j < line_row_end; ++j)
+			sum += lu.l[j] * lu.u[j];
+
+		lu.d[i] = sqrt(a.d[i] - sum);
+	}
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+void mul(const matrix& a, vector<double>& x_y) {
+	vector<double> result(a.n, 0);
+
+	for (int i = 0; i < a.n; ++i) {
+		int start = a.lineElemStart(i);
+		int size = a.lineElemCount(i);
+		for (int j = 0; j < size; j++) {
+			result[i] += a.l[start + j] * x_y[a.lineElemRow(i, j)];
+			result[a.lineElemRow(i, j)] += a.u[start + j] * x_y[i];
+		}
+	}
+
+	// Умножение диагональных элементов на вектор
+	for (int i = 0; i < a.n; ++i)
+		result[i] += a.d[i] * x_y[i];
+
+	x_y = result;
+}
+
+//-----------------------------------------------------------------------------
+void mul_t(const matrix& a, vector<double>& x_y) {
+	vector<double> result(a.n, 0);
+
+	for (int i = 0; i < a.n; ++i) {
+		int start = a.lineElemStart(i);
+		int size = a.lineElemCount(i);
+		for (int j = 0; j < size; j++) {
+			result[i] += a.u[start + j] * x_y[a.lineElemRow(i, j)];
+			result[a.lineElemRow(i, j)] += a.l[start + j] * x_y[i];
+		}
+	}
+
+	// Умножение диагональных элементов на вектор
+	for (int i = 0; i < a.n; ++i)
+		result[i] += a.d[i] * x_y[i];
+
+	x_y = result;
+}
+
+//-----------------------------------------------------------------------------
+void mul_l_invert_t(const matrix& l, vector<double>& y_x) {
+	for (int i = l.n - 1; i >= 0; i--) {
+		int start = l.lineElemStart(i);
+		int size = l.lineElemCount(i);
+
+		y_x[i] /= l.d[i];
+		for (int j = 0; j < size; ++j)
+			y_x[l.lineElemRow(i, j)] -= y_x[i] * l.l[start + j];
+	}
+}
+
+//-----------------------------------------------------------------------------
+void mul_u_invert_t(const matrix& u, vector<double>& y_x) {
+	for (int i = 0; i < u.n; ++i) {
+		int start = u.lineElemStart(i);
+		int size = u.lineElemCount(i);
+
+		sumreal sum = 0;
+		for (int j = 0; j < size; ++j)
+			sum += u.u[start + j] * y_x[u.lineElemRow(i, j)];
+		y_x[i] = (y_x[i] - sum) / u.d[i];
+	}
+}
+
+//-----------------------------------------------------------------------------
+void mul_l_invert(const matrix& l, vector<double>& y_x) {
+	for (int i = 0; i < l.n; ++i) {
+		int start = l.lineElemStart(i);
+		int size = l.lineElemCount(i);
+
+		sumreal sum = 0;
+		for (int j = 0; j < size; ++j)
+			sum += l.l[start + j] * y_x[l.lineElemRow(i, j)];
+		y_x[i] = (y_x[i] - sum) / l.d[i];
+	}
+}
+
+//-----------------------------------------------------------------------------
+void mul_u_invert(const matrix& u, vector<double>& y_x) {
+	for (int i = u.n-1; i >= 0; i--) {
+		int start = u.lineElemStart(i);
+		int size = u.lineElemCount(i);
+
+		y_x[i] /= u.d[i];
+		for (int j = 0; j < size; ++j)
+			y_x[u.lineElemRow(i, j)] -= y_x[i] * u.u[start + j];
+	}
+}
+
+//-----------------------------------------------------------------------------
+void mul_u(const matrix& u, vector<double>& x_y) {
+	vector<double> result(u.n, 0);
+
+	for (int i = 0; i < u.n; ++i) {
+		int start = u.lineElemStart(i);
+		int size = u.lineElemCount(i);
+		for (int j = 0; j < size; j++) {
+			result[u.lineElemRow(i, j)] += u.u[start + j] * x_y[i];
+		}
+	}
+
+	// Умножение диагональных элементов на вектор
+	for (int i = 0; i < u.n; ++i)
+		result[i] += u.d[i] * x_y[i];
+
+	x_y = result;
+}
+
+//-----------------------------------------------------------------------------
+void mul(const vector<double>& d, vector<double>& x_y) {
+	for (int i = 0; i < d.size(); i++)
+		x_y[i] *= d[i];
+}
+
+//-----------------------------------------------------------------------------
+void mul_invert(const vector<double>& d, vector<double>& x_y) {
+	for (int i = 0; i < d.size(); i++)
+		x_y[i] /= d[i];
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+class SLAU
+{
+public:
+
+//-----------------------------------------------------------------------------
+pair<int, double> los2() {
+	lu_decompose(a, lu);
+	x.clear();
+	x.resize(n, 0);
+
+	r = x;
+	mul(a, r);
+	for (int i = 0; i < n; i++)
+		r[i] = f[i] - r[i];
+	mul_l_invert(lu, r);
+
+	z = r;
+	mul_u_invert(lu, z);
+
+	p = z;
+	mul(a, p);
+	mul_l_invert(lu, p);
+
+	double flen = sqrt(f*f);
+	double residual;
+
+	int i = 0;
+	while (true) {
+		double pp = p*p;
+		double alpha = (p*r) / pp;
+		for (int i = 0; i < n; ++i) {
+			x[i] += alpha * z[i];
+			r[i] -= alpha * p[i];
+		}
+		t1 = r;
+		mul_u_invert(lu, t1);
+		t2 = t1;
+		mul(a, t2);
+		mul_l_invert(lu, t2);
+		double beta = -(p*t2) / pp;
+		for (int i = 0; i < n; ++i) {
+			z[i] = t1[i] + beta * z[i];
+			p[i] = t2[i] + beta * p[i];
+		}
+		residual = length(r) / flen;
+		i++;
+
+		if (is_log) cout << "Iteration: " << setw(4) << i << ", Residual: " << setw(20) << setprecision(16) << residual << endl;
+		if (fabs(residual) < eps || i > maxiter)
+			break;
+	}
+
+	return {i, residual};
+}
+
+//-----------------------------------------------------------------------------
+pair<int, double> gmres_lu() {
+	lu_decompose(a, lu);
+	x.clear();
+	x.resize(n, 0);
+
+	r = x;
+	mul(a, r);
+	for (int i = 0; i < n; i++)
+		r[i] = f[i] - r[i];
+	mul_l_invert(lu, r);
+
+	z = r;
+	mul_u_invert(lu, z);
+
+	p = z;
+	mul(a, p);
+	mul_l_invert(lu, p);
+
+	double flen = sqrt(f*f);
+	double residual;
+
+	int i = 0;
+	while (true) {
+		double pp = p*p;
+		double alpha = (p*r) / pp;
+		for (int i = 0; i < n; ++i) {
+			x[i] += alpha * z[i];
+			r[i] -= alpha * p[i];
+		}
+		t1 = r;
+		mul_u_invert(lu, t1);
+		t2 = t1;
+		mul(a, t2);
+		mul_l_invert(lu, t2);
+		double beta = -(p*t2) / pp;
+		for (int i = 0; i < n; ++i) {
+			z[i] = t1[i] + beta * z[i];
+			p[i] = t2[i] + beta * p[i];
+		}
+		residual = length(r) / flen;
+		i++;
+
+		if (is_log) cout << "Iteration: " << setw(4) << i << ", Residual: " << setw(20) << setprecision(16) << residual << endl;
+		if (fabs(residual) < eps || i > maxiter)
+			break;
+	}
+
+	return {i, residual};
+}
+
+int n, maxiter;
+double eps;
+matrix a, lu;
+vector<double> f;
+vector<double> r, z, p;
+vector<double> x, t1, t2;
+bool is_log;
+
+};
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------//-----------------------------------------------------------------------------
 
 struct Constants
 {
@@ -26,7 +441,7 @@ Function1D calcRightPartC(
 	const Function1D& uc,
 	const Constants& c
 ) {
-	// fs = -lambda * div(grad uc) - omega * sigma * us - omega^2 * xi * uc
+	// fs = -lambda * div(grad uc) + omega * sigma * us - omega^2 * xi * uc
 	return [=](double x) -> double {
 		using namespace placeholders;
 		auto divgrad = calcSecondDerivative(uc);
@@ -93,6 +508,39 @@ EMatrix calcGlobalMatrix(const lin_approx_t& u, const Constants& c) {
 			}
 		}
 	}
+
+	return result;
+}
+
+//-----------------------------------------------------------------------------
+matrix calcGlobalMatrixProfile(const lin_approx_t& u, const Constants& c) {
+	matrix result;
+	result.n = u.size() * 2;
+	result.d.resize(result.n, 0);
+	result.i.resize(result.n+1, -1);
+
+	int counter = 0;
+	for (int i = 0; i < u.size()-1; ++i) {
+		auto l = calcLocalMatrix(i, i+1, u, c, true);
+		for (int y = 0; y < l.cols(); ++y) {
+			if (result.i[i*2 + y] == -1) {
+				result.i[i*2 + y] = counter;
+			}
+			if ((i != 0 && y > 1) || (i == 0)) {
+				for (int x = 0; x <= y; ++x) {
+					if (x == y) {
+						result.d[i*2 + x] = l(x, y);
+					} else {
+						result.j.push_back(i*2 + x);
+						result.u.push_back(l(x, y));
+						result.l.push_back(l(y, x));
+						counter++;
+					}
+				}
+			}
+		}
+	}
+	result.i.back() = counter;
 
 	return result;
 }
@@ -199,6 +647,36 @@ void setFirstBoundaryConditions(
 }
 
 //-----------------------------------------------------------------------------
+void setFirstBoundaryConditions(
+	matrix& A,
+	vector<double>& b,
+	const Function1D& us_true,
+	const Function1D& uc_true,
+	const lin_approx_t& u
+) {
+	auto clear_lines = [&] (vector<int> lines) {
+		for (auto& i : lines) A.d[i] = 0;
+
+		for (int i = 0; i < A.i.size()-1; i++) {
+			for (int pj = A.i[i]; pj < A.i[i+1]; pj++) {
+				int j = A.j[pj];
+				if (find(lines.begin(), lines.end(), j) != lines.end()) A.u[pj] = 0;
+				if (find(lines.begin(), lines.end(), i) != lines.end()) A.l[pj] = 0;
+			}
+		}
+	};
+
+	int end = A.n-1;
+	clear_lines({0, 1, end-1, end});
+
+	A.d[0] = 1; b[0] = us_true(u.middle(0));
+	A.d[1] = 1; b[1] = uc_true(u.middle(0));
+
+	A.d[end-1] = 1; b[end-1] = us_true(u.middle(u.size()-1));
+	A.d[end] = 1;   b[end] = uc_true(u.middle(u.size()-1));
+}
+
+//-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 
@@ -206,18 +684,22 @@ int main() {
 	cout.precision(3);
 
 	Constants c;
-	c.lambda = 32;
+	/*c.lambda = 32;
 	c.omega = 100;
 	c.xi = 10;
-	c.sigma = 24;
-	auto us_true = [] (double x) -> double { return 3*x*x + 2; };
-	auto uc_true = [] (double x) -> double { return 6*x - x*x; };
+	c.sigma = 24;*/
+	c.lambda = 1;
+	c.omega = 1;
+	c.xi = 1;
+	c.sigma = 1;
+	auto us_true = [] (double x) -> double { return 3*x*x*x*x + 2*exp(x); };
+	auto uc_true = [] (double x) -> double { return 6*x - pow(x, exp(x)); };
 
 	auto fs = calcRightPartS(us_true, uc_true, c);
 	auto fc = calcRightPartC(us_true, uc_true, c);
 
 	lin_approx_t us, uc;
-	make_grid(us.x, 0, 1, 50);
+	make_grid(us.x, 1, 2, 50000);
 	uc.x = us.x;
 
 	/*auto A = calcGlobalMatrix(us, c);
@@ -229,9 +711,26 @@ int main() {
 	
 	setAnswer(us, uc, x);*/
 
-	auto A1 = calcGlobalMatrixDiag(us, c);
+	auto A2 = calcGlobalMatrixProfile(us, c);
+	auto b2 = to(calcB<Vector>(us, c, fs, fc));
+	setFirstBoundaryConditions(A2, b2, us_true, uc_true, us);
+
+	SLAU slau;
+	slau.maxiter = 10;
+	slau.eps = 1e-16;
+	slau.is_log = true;
+	slau.n = A2.n;
+	slau.a = A2;
+	slau.f = b2;
+	slau.x.resize(slau.n);
+	slau.t1.resize(slau.n);
+	slau.t2.resize(slau.n);
+	slau.los2();
+	setAnswer(us, uc, to(slau.x));
+
+	/*auto A1 = calcGlobalMatrixDiag(us, c);
 	auto b1 = calcB<Vector>(us, c, fs, fc);
-	setFirstBoundaryConditions(A1, b1, us_true, uc_true, us);
+	setFirstBoundaryConditions(A1, b1, us_true, uc_true, us);*/
 	/*Matrix denseA(A.cols(), A.rows());
 	for (int i = 0; i < A.cols(); i++) {
 		for (int j = 0; j < A.rows(); j++) {
@@ -240,7 +739,7 @@ int main() {
 	}
 	MatrixDiagonal A2(denseA);*/
 
-	Vector x1;
+	/*Vector x1;
 	SolverSLAE_Iterative solver;
 	solver.epsilon = 1e-7;
 	solver.isLog = false;
@@ -255,7 +754,7 @@ int main() {
 	mul(A1, x1, b2);
 	b2.negate();
 	sum(b1, b2, b2);
-	cout << "residual slae: " << calcNorm(b2) << endl;
+	cout << "residual slae: " << calcNorm(b2) << endl;*/
 
 	/*Matrix dense; A1.toDenseMatrix(dense);
 	cout << A << endl << b << endl;
@@ -264,13 +763,17 @@ int main() {
 	cout << x << endl;
 	x1.save(cout); cout << endl;*/
 
+	/*Matrix dense; A2.toDense(dense);
+	cout << A << endl;
+	dense.save(cout); cout << endl;*/
+
 	double residual = norm(us_true, us) + norm(uc_true, uc);
 
-	cout << "answer s:    " << us.q << endl;
+	/*cout << "answer s:    " << us.q << endl;
 	cout << "should be s: " << calcTrulyApprox(us.x, us_true).q << endl;
 
 	cout << "answer s:    " << uc.q << endl;
-	cout << "should be s: " << calcTrulyApprox(uc.x, uc_true).q << endl;
+	cout << "should be s: " << calcTrulyApprox(uc.x, uc_true).q << endl;*/
 
 	cout << "residual: " << residual << endl;
 
