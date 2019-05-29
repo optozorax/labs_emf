@@ -1,0 +1,85 @@
+\pgfplotstableset{
+	begin table={\rowcolors{2}{gray!25}{white}\begin{tabular}},
+	end table=\end{tabular},
+}
+
+\mytitlepage{прикладной математики}{3}{Уравнения математической физики}{Решение нелинейных начально-краевых задач}{ПМ-63}{Шепрут И.И.}{1}{Патрушев И.И.}{2019}
+
+\section{Цель работы}
+
+Разработать программу решения гармонической задачи методом конечных элементов. Провести сравнение прямого и итерационного методов решения получаемой в результате конечноэлементной аппроксимации СЛАУ.
+
+\section{Задание}
+
+\begin{easylist}
+\ListProperties(Hang=true, Margin2=12pt, Style2**=$\bullet$ , Hide2=2, Hide1=0)
+& кмва
+\end{easylist}
+
+\textbf{Вариант 1:} Решить одномерную гармоническую задачу в декартовых координатах, базисные функции – линейные.
+
+\section{Исследования}
+
+кмва
+
+\begin{easylist}
+\ListProperties(Hang1=true, Margin2=12pt, Style1**=$\bullet$ , Hide1=1)
+& кмва
+\end{easylist}
+
+\subsection{Изменение констант}
+
+\newcommand{\bigtable}[1]{
+\begin{center}
+\noindent\pgfplotstabletypeset[
+	columns/param/.style={string type, column name={Параметр}},
+	columns/los_norm/.style={column name={LOS норма}},
+	columns/bsg_norm/.style={column name={BSG норма}},
+	columns/los_time/.style={column name={\tcell{LOS\\время}}},
+	columns/bsg_time/.style={column name={\tcell{BSG\\время}}},
+	columns/los_iter/.style={column name={\tcell{LOS\\итераций}}},
+	columns/bsg_iter/.style={column name={\tcell{BSG\\итераций}}, column type/.add={}{|},},
+	every head row/.style={before row=\hline,after row=\hline\hline}, 
+	every last row/.style={after row=\hline},
+	column type/.add={|}{},
+	col sep=tab,
+]{#1.txt}
+\end{center}
+}
+
+\newcommand{\bigtables}[1]{
+\bigtable{#1_omega}
+\bigtable{#1_lambda}
+\bigtable{#1_sigma}
+\bigtable{#1_xi}
+}
+
+\bigtables{3_parameters_100}
+
+\bigtables{3_parameters_50000}
+
+\textbf{Вывод:}
+
+\subsection{Зависимость точности от нелинейной сетки}
+
+\newcommand{\graphgrid}[1]{
+\noindent\begin{tikzpicture}
+\begin{semilogyaxis}[xlabel=t,ylabel=Точность решения,width=\textwidth, height=6cm]
+\addplot[red, no markers] table [y=norma, x=t]{#1.txt};
+\addplot[blue, no markers] table [y=normb, x=t]{#1.txt};
+\addplot[black, no markers] table [y=norm, x=t]{#1.txt};
+\end{semilogyaxis}
+\end{tikzpicture}
+}
+
+\graphgrid{3_grid_exp}
+
+\graphgrid{3_grid_exp_minus}
+
+\graphgrid{3_grid_x2}
+
+\graphgrid{3_grid_uuu}
+
+\section{Код программы}
+
+% \mycodeinput{c++}{../main.cpp}{main.cpp}

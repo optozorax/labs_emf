@@ -1,7 +1,28 @@
 #include <iomanip>
+#include <chrono>
+#include <fstream>
+#include <thread>
 
 #include "../2/lib.h"
 #include <diagonal.h>
+
+using namespace std;
+
+class time_counter
+{
+public:
+	void start(void) {
+		_start = std::chrono::high_resolution_clock::now();
+	}
+	void end(void) {
+		_end = std::chrono::high_resolution_clock::now();
+	}
+	double get_microseconds(void) const {
+		return std::chrono::duration_cast<std::chrono::microseconds>(_end - _start).count();
+	}
+private:
+	std::chrono::high_resolution_clock::time_point _start, _end;
+};
 
 //-----------------------------------------------------------------------------
 double operator*(const vector<double>& a, const vector<double>& b) {
@@ -694,36 +715,39 @@ void setFirstBoundaryConditions(
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 
-int main() {
-	cout.precision(3);
+double spacea = 1, spaceb = 2;
 
-	Constants c;
-	/*c.lambda = 32;
-	c.omega = 100;
-	c.xi = 10;
-	c.sigma = 24;*/
-	c.lambda = 1;
-	c.omega = 1;
-	c.xi = 1;
-	c.sigma = 1;
-	auto us_true = [] (double x) -> double { return 3*x*x*x*x + 2*exp(x); };
-	auto uc_true = [] (double x) -> double { return 6*x - pow(x, exp(x)); };
+//-----------------------------------------------------------------------------
+struct Result1
+{
+	double los_integral_norm, bsg_integral_norm;
+	double los_time, bsg_time;
+	int los_iter, bsg_iter;
+};
 
+ostream& operator<<(ostream& out, const Result1& res) {
+	out
+		<< res.los_integral_norm << "\t"
+		<< res.bsg_integral_norm << "\t"
+		<< res.los_time << "\t"
+		<< res.bsg_time << "\t"
+		<< res.los_iter << "\t"
+		<< res.bsg_iter;
+	return out;
+}
+
+Result1 calcMethod(
+	const Constants& c, 
+	Function1D us_true, 
+	Function1D uc_true,
+	const vector<double>& grid
+) {
 	auto fs = calcRightPartS(us_true, uc_true, c);
 	auto fc = calcRightPartC(us_true, uc_true, c);
 
 	lin_approx_t us, uc;
-	make_grid(us.x, 1, 2, 500000);
-	uc.x = us.x;
-
-	/*auto A = calcGlobalMatrix(us, c);
-	auto b = calcB<EVector>(us, c, fs, fc);
-	setFirstBoundaryConditions(A, b, us_true, uc_true, us);
-	
-	Eigen::JacobiSVD<EMatrix> svd(A, Eigen::ComputeThinU | Eigen::ComputeThinV);
-	EVector x = svd.solve(b);
-	
-	setAnswer(us, uc, x);*/
+	us.x = grid;
+	uc.x = grid;
 
 	auto A2 = calcGlobalMatrixProfile(us, c);
 	auto b2 = to(calcB<Vector>(us, c, fs, fc));
@@ -732,65 +756,303 @@ int main() {
 	SLAU slau;
 	slau.maxiter = 10;
 	slau.eps = 1e-16;
-	slau.is_log = true;
+	slau.is_log = false;
 	slau.n = A2.n;
 	slau.a = A2;
 	slau.f = b2;
 	slau.x.resize(slau.n);
 	slau.t1.resize(slau.n);
 	slau.t2.resize(slau.n);
-	//slau.los2();
-	slau.bsg_stab_lu();
+
+	time_counter t1;
+	t1.start();
+	auto res_los = slau.los2();
+	t1.end();
 	setAnswer(us, uc, to(slau.x));
+	double los_residual = norm(us_true, us) + norm(uc_true, uc);
 
-	/*auto A1 = calcGlobalMatrixDiag(us, c);
-	auto b1 = calcB<Vector>(us, c, fs, fc);
-	setFirstBoundaryConditions(A1, b1, us_true, uc_true, us);*/
-	/*Matrix denseA(A.cols(), A.rows());
-	for (int i = 0; i < A.cols(); i++) {
-		for (int j = 0; j < A.rows(); j++) {
-			denseA(i, j) = A(i, j);
-		}
+	time_counter t2;
+	t2.start();
+	auto res_bsg = slau.bsg_stab_lu();
+	t2.end();
+	setAnswer(us, uc, to(slau.x));
+	double bsg_residual = norm(us_true, us) + norm(uc_true, uc);
+
+	return {los_residual, bsg_residual, t1.get_microseconds(), t2.get_microseconds(), res_los.first, res_bsg.first};
+}
+
+//-----------------------------------------------------------------------------
+struct grid_point { double t, los_norm, bsg_norm; };
+
+vector<grid_point> calcGrid(
+	const Constants& c,
+	int elemCount, 
+	Function1D us_true, 
+	Function1D uc_true,
+	function<Function1D(double)> moveMaker
+) {
+	int n = 1000;
+	vector<grid_point> result;
+	for (double t = 1.0/n; t < 1.0 + 1.0/n; t += 1.0/n) {
+		vector<double> grid;
+		make_grid(grid, spacea, spaceb, elemCount, moveMaker(t));
+		
+		auto res = calcMethod(c, us_true, uc_true, grid);
+
+		result.push_back({t, res.los_integral_norm, res.bsg_integral_norm});
 	}
-	MatrixDiagonal A2(denseA);*/
 
-	/*Vector x1;
-	SolverSLAE_Iterative solver;
-	solver.epsilon = 1e-7;
-	solver.isLog = false;
-	solver.maxIterations = 5000;
-	solver.start = Vector(us.size() * 2, 0);
-	solver.w = 0.8;
-	solver.seidel(A1, b1, x1);
+	return result;
+}
 
-	setAnswer(us, uc, x1);
+//-----------------------------------------------------------------------------
+void writeParametersInvestigation(
+	Function1D us_true, 
+	Function1D uc_true, 
+	int elemCount,
+	const string& filename
+) {
 
-	Vector b2;
-	mul(A1, x1, b2);
-	b2.negate();
-	sum(b1, b2, b2);
-	cout << "residual slae: " << calcNorm(b2) << endl;*/
+	vector<double> grid;
+	make_grid(grid, spacea, spaceb, elemCount);
 
-	/*Matrix dense; A1.toDenseMatrix(dense);
-	cout << A << endl << b << endl;
-	dense.save(cout); cout << endl;
-	b1.save(cout); cout << endl;
-	cout << x << endl;
-	x1.save(cout); cout << endl;*/
+	// omega: 10^-4, 10^9
+	// lambda: 10^2, 8*10^6
+	// sigma: 0, 10^8
+	// xi: 8.81*10^-12, 10^-10
 
-	/*Matrix dense; A2.toDense(dense);
-	cout << A << endl;
-	dense.save(cout); cout << endl;*/
+	vector<double> omega = {1e-4, 1e-3, 1e-2, 1e-1, 0, 1, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9};
+	vector<double> lambda = {1e2, 1e3, 1e4, 1e5, 1e6, 8e6};
+	vector<double> sigma = {0, 1, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8};
+	vector<double> xi = {8.81e-12, 1e-12, 1e-11, 1e-10};
 
-	double residual = norm(us_true, us) + norm(uc_true, uc);
+	Constants c;
+	c.omega = 1;
+	c.lambda = 1;
+	c.sigma = 1;
+	c.xi = 1e-11;
 
-	/*cout << "answer s:    " << us.q << endl;
-	cout << "should be s: " << calcTrulyApprox(us.x, us_true).q << endl;
+	#define write_parameter(par) {\
+		ofstream fout(filename + "_" + #par + ".txt"); \
+		fout << "param\tlos_norm\tbsg_norm\tlos_time\tbsg_time\tlos_iter\tbsg_iter" << endl; \
+		fout << scientific << setprecision(2); \
+		for (auto& i : par) { \
+			c.par = i; \
+			auto res = calcMethod(c, us_true, uc_true, grid); \
+			fout  << "$\\" << #par << " =" << write_for_latex_double(i, 2) << "$" << "\t"  << res << endl; \
+		} c.par = 1; \
+		fout.close(); }\
 
-	cout << "answer s:    " << uc.q << endl;
-	cout << "should be s: " << calcTrulyApprox(uc.x, uc_true).q << endl;*/
+	write_parameter(omega);
+	write_parameter(lambda);
+	write_parameter(sigma);
+	write_parameter(xi);
+}
 
-	cout << "residual: " << residual << endl;
+//-----------------------------------------------------------------------------
+void writeGridInvestigation(
+	Function1D us_true, 
+	Function1D uc_true, 
+	int elemCount,
+	const string& filename) {
+	ofstream fout(filename);
 
-	system("pause");
+	fout << "t\tnorma\tnormb\tnorm" << endl;
+
+	Constants c;
+	c.lambda = 1;
+	c.omega = 1;
+	c.xi = 1;
+	c.sigma = 1;
+
+	using namespace placeholders;
+	auto grid0 = calcGrid(c, elemCount, us_true, uc_true, bind(getMove0, _1, 1));
+	auto grid1 = calcGrid(c, elemCount, us_true, uc_true, bind(getMove1, _1, 1));
+
+	for (int i = 0; i < grid0.size(); ++i) {
+		fout 
+			<< grid0[i].t << "\t"
+			<< grid0[i].bsg_norm << "\t" 
+			<< grid1[i].bsg_norm << "\t"
+			<< grid0[grid0.size()-2].bsg_norm << endl;
+	}
+
+	fout.close();
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+
+int main() {
+	// cout.precision(3);
+
+	// Constants c;
+	// c.lambda = 32;
+	// c.omega = 100;
+	// c.xi = 10;
+	// c.sigma = 24;
+
+	// auto us_true = [] (double x) -> double { return 3*x*x*x*x + 2*exp(x); };
+	// auto uc_true = [] (double x) -> double { return 6*x - pow(x, exp(x)); };
+
+	// auto fs = calcRightPartS(us_true, uc_true, c);
+	// auto fc = calcRightPartC(us_true, uc_true, c);
+
+	// lin_approx_t us, uc;
+	// make_grid(us.x, 1, 2, 45000);
+	// uc.x = us.x;
+
+	// /*auto A = calcGlobalMatrix(us, c);
+	// auto b = calcB<EVector>(us, c, fs, fc);
+	// setFirstBoundaryConditions(A, b, us_true, uc_true, us);
+	
+	// Eigen::JacobiSVD<EMatrix> svd(A, Eigen::ComputeThinU | Eigen::ComputeThinV);
+	// EVector x = svd.solve(b);
+	
+	// setAnswer(us, uc, x);*/
+
+	// double residual;
+
+	// auto A2 = calcGlobalMatrixProfile(us, c);
+	// auto b2 = to(calcB<Vector>(us, c, fs, fc));
+	// setFirstBoundaryConditions(A2, b2, us_true, uc_true, us);
+
+	// SLAU slau;
+	// slau.maxiter = 10;
+	// slau.eps = 1e-16;
+	// slau.is_log = true;
+	// slau.n = A2.n;
+	// slau.a = A2;
+	// slau.f = b2;
+	// slau.x.resize(slau.n);
+	// slau.t1.resize(slau.n);
+	// slau.t2.resize(slau.n);
+
+	// time_counter t1;
+	// t1.start();
+	// slau.los2();
+	// t1.end();
+	// setAnswer(us, uc, to(slau.x));
+	// residual = norm(us_true, us) + norm(uc_true, uc);
+	// cout << "los  2 residual: " << residual << endl << endl;
+	// cout << "los  2 time:     " << t1.get_milliseconds() << endl;
+
+	// time_counter t2;
+	// t2.start();
+	// slau.bsg_stab_lu();
+	// t2.end();
+	// setAnswer(us, uc, to(slau.x));
+	// residual = norm(us_true, us) + norm(uc_true, uc);
+	// cout << "bsg lu residual: " << residual << endl << endl;
+	// cout << "bsg lu time:     " << t2.get_milliseconds() << endl;
+
+	// /*auto A1 = calcGlobalMatrixDiag(us, c);
+	// auto b1 = calcB<Vector>(us, c, fs, fc);
+	// setFirstBoundaryConditions(A1, b1, us_true, uc_true, us);*/
+	// /*Matrix denseA(A.cols(), A.rows());
+	// for (int i = 0; i < A.cols(); i++) {
+	// 	for (int j = 0; j < A.rows(); j++) {
+	// 		denseA(i, j) = A(i, j);
+	// 	}
+	// }
+	// MatrixDiagonal A2(denseA);*/
+
+	// /*Vector x1;
+	// SolverSLAE_Iterative solver;
+	// solver.epsilon = 1e-7;
+	// solver.isLog = false;
+	// solver.maxIterations = 5000;
+	// solver.start = Vector(us.size() * 2, 0);
+	// solver.w = 0.8;
+	// solver.seidel(A1, b1, x1);
+
+	// setAnswer(us, uc, x1);
+
+	// Vector b2;
+	// mul(A1, x1, b2);
+	// b2.negate();
+	// sum(b1, b2, b2);
+	// cout << "residual slae: " << calcNorm(b2) << endl;*/
+
+	// /*Matrix dense; A1.toDenseMatrix(dense);
+	// cout << A << endl << b << endl;
+	// dense.save(cout); cout << endl;
+	// b1.save(cout); cout << endl;
+	// cout << x << endl;
+	// x1.save(cout); cout << endl;*/
+
+	// /*Matrix dense; A2.toDense(dense);
+	// cout << A << endl;
+	// dense.save(cout); cout << endl;*/
+
+	// //double residual = norm(us_true, us) + norm(uc_true, uc);
+
+	// /*cout << "answer s:    " << us.q << endl;
+	// cout << "should be s: " << calcTrulyApprox(us.x, us_true).q << endl;
+
+	// cout << "answer s:    " << uc.q << endl;
+	// cout << "should be s: " << calcTrulyApprox(uc.x, uc_true).q << endl;*/
+
+	// //cout << "residual: " << residual << endl;
+
+	// system("pause");
+
+	vector<thread> t;
+
+	t.emplace_back([](){
+	writeParametersInvestigation(
+		[] (double x) -> double { return 3.0*x; },
+		[] (double x) -> double { return -10.0*x; },
+		100,
+		"3_parameters_100"
+	);
+	});
+
+	t.emplace_back([](){
+	writeParametersInvestigation(
+		[] (double x) -> double { return 3.0*x; },
+		[] (double x) -> double { return -10.0*x; },
+		50000,
+		"3_parameters_50000"
+	);
+	});
+
+	t.emplace_back([](){
+	writeGridInvestigation(
+		[] (double x) -> double { return exp(x/2); },
+		[] (double x) -> double { return 5*exp(x-3); },
+		50,
+		"3_grid_exp.txt"
+	);
+	});
+
+	t.emplace_back([](){
+	writeGridInvestigation(
+		[] (double x) -> double { return exp(-x/2); },
+		[] (double x) -> double { return 5*exp(-x+3); },
+		50,
+		"3_grid_exp_minus.txt"
+	);
+	});
+
+	t.emplace_back([](){
+	writeGridInvestigation(
+		[] (double x) -> double { return x*x; },
+		[] (double x) -> double { return 3.0*x*(x+2)-5; },
+		50,
+		"3_grid_x2.txt"
+	);
+	});
+
+	t.emplace_back([](){
+	writeGridInvestigation(
+		[] (double x) -> double { return 3*x*x*x*x + 2*exp(x); },
+		[] (double x) -> double { return 6*x - pow(x, exp(x)); },
+		50,
+		"3_grid_uuu.txt"
+	);
+	});
+
+	for (auto& i : t) i.join();
 }

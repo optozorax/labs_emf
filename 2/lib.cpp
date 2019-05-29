@@ -42,9 +42,15 @@ double basicFunction(double left, double middle, double right, double x) {
 	// Базовая линейная функция
 	if (x > left && x < right) {
 		if (x < middle) {
-			return (x-left)/(middle-left);
+			if (middle != left)
+				return (x-left)/(middle-left);
+			else
+				return 0;
 		} else {
-			return 1-(x-middle)/(right-middle);
+			if (right != middle)
+				return 1-(x-middle)/(right-middle);
+			else
+				return 0;
 		}
 	}
 
@@ -56,9 +62,15 @@ double basicFunctionGrad(double left, double middle, double right, double x) {
 	// Базовая линейная функция
 	if (x > left && x < right) {
 		if (x < middle) {
-			return 1.0/(middle-left);
+			if (middle != left)
+				return 1.0/(middle-left);
+			else
+				return 0;
 		} else {
-			return -1.0/(right-middle);
+			if (right != middle)
+				return -1.0/(right-middle);
+			else
+				return 0;
 		}
 	}
 
@@ -131,7 +143,7 @@ int lin_approx_t::size(void) const {
 //-----------------------------------------------------------------------------
 double lin_approx_t::left(int i) const {
 	if (i == 0)
-		return x[0]-0.00001;
+		return x[0];
 	else
 		return x[i-1];
 }
@@ -144,7 +156,7 @@ double lin_approx_t::middle(int i) const {
 //-----------------------------------------------------------------------------
 double lin_approx_t::right(int i) const {
 	if (i == x.size() - 1)
-		return x.back()+0.00001;
+		return x.back();
 	else
 		return x[i+1];
 }

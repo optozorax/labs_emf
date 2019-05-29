@@ -1,0 +1,7 @@
+param	los_norm	bsg_norm	los_time	bsg_time	los_iter	bsg_iter
+$\lambda =1\cdot 10^{2}$	3.85e-08	2.50e-05	2.47e+04	2.75e+04	3	2
+$\lambda =10\cdot 10^{2}$	4.05e-07	5.52e-05	2.55e+04	2.76e+04	3	2
+$\lambda =1\cdot 10^{4}$	6.36e-08	6.90e-05	2.42e+04	2.79e+04	3	2
+$\lambda =1\cdot 10^{5}$	5.36e-08	5.13e-04	2.45e+04	2.74e+04	3	2
+$\lambda =10\cdot 10^{5}$	2.46e-07	6.01e-04	2.41e+04	3.63e+04	3	3
+$\lambda =8\cdot 10^{6}$	4.15e-07	2.49e-04	2.41e+04	3.81e+04	3	3

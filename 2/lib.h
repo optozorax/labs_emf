@@ -3,9 +3,9 @@
 #include <functional>
 #include <vector>
 #include <iostream>
-#define real realeigen
+//#define real realeigen
 #include <Eigen/Dense>
-#undef real
+//#undef real
 
 
 using namespace std;
