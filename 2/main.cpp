@@ -5,6 +5,9 @@
 #include <iomanip>
 #include <fstream>
 #include <sstream>
+#include <thread>
+#include <future>
+#include <chrono>
 
 #include "lib.h"
 
@@ -90,8 +93,8 @@ lin_approx_t approximate_function(Function1D lambda, const lin_approx_t& u) {
 }
 
 //-----------------------------------------------------------------------------
-Matrix calcA(const lin_approx_t& u_last, double dt, Function1D lambda, Function1D sigma) {
-	Matrix result(u_last.size(), u_last.size());
+EMatrix calcA(const lin_approx_t& u_last, double dt, Function1D lambda, Function1D sigma) {
+	EMatrix result(u_last.size(), u_last.size());
 	for (int i = 0; i < u_last.size()-1; ++i) {
 		for (int j = 0; j < u_last.size(); ++j) {
 			result(i, j) = calc_a1_integral(lambda, u_last, i, j) + calc_a2_integral(sigma, u_last, i, j) / dt;
@@ -102,8 +105,8 @@ Matrix calcA(const lin_approx_t& u_last, double dt, Function1D lambda, Function1
 } /// Рассчитать матрицу A(q)
 
 //-----------------------------------------------------------------------------
-Vector calcB(const lin_approx_t& u_last, double dt, Function1D f, Function1D sigma, const lin_approx_t& u_last_time) {
-	Vector result(u_last.size());
+EVector calcB(const lin_approx_t& u_last, double dt, Function1D f, Function1D sigma, const lin_approx_t& u_last_time) {
+	EVector result(u_last.size());
 	for (int i = 0; i < u_last.size(); ++i) {
 		result(i) = calc_b1_integral(f, u_last, i) + calc_b2_integral(sigma, u_last, u_last_time, i) / dt;
 	}
@@ -112,7 +115,7 @@ Vector calcB(const lin_approx_t& u_last, double dt, Function1D f, Function1D sig
 } /// Рассчитать вектор правой части b(q)
 
 //-----------------------------------------------------------------------------
-void write_first_boundary_conditions(Matrix& A, Vector& b, const lin_approx_t& u, Function2D u_true, double time) {
+void write_first_boundary_conditions(EMatrix& A, EVector& b, const lin_approx_t& u, Function2D u_true, double time) {
 	A(0, 0) = 1;
 	for (int i = 1; i < A.cols(); ++i) A(0, i) = 0;
 	b(0) = u_true(u.x.front(), time);
@@ -140,7 +143,7 @@ Result solveFixedPointIteration(
 ) {
 	lin_approx_t u = u_last_time;
 
-	Vector last_x(u.q.size());
+	EVector last_x(u.q.size());
 	for (int i = 0; i < u.q.size(); i++)
 		last_x(i) = u.q[i];
 
@@ -151,8 +154,8 @@ Result solveFixedPointIteration(
 		auto b = calcB(u, dt, bind(f, placeholders::_1, time), sigma, u_last_time);
 		write_first_boundary_conditions(A, b, u, u_true, time);
 
-		Eigen::JacobiSVD<Matrix> svd(A, Eigen::ComputeThinU | Eigen::ComputeThinV);
-		Vector x = svd.solve(b);
+		Eigen::JacobiSVD<EMatrix> svd(A, Eigen::ComputeThinU | Eigen::ComputeThinV);
+		EVector x = svd.solve(b);
 		for (int i = 0; i < u.size(); ++i)
 			u.q[i] = x(i);
 
@@ -197,10 +200,10 @@ void write_iterations_information(double t0, const Result& result, const Functio
 	cout << "iterations: " << result.iterations << endl;
 	cout << "answer:   " << result.answer.q << endl;
 
-	lin_approx_t u_truly_approx = calcTrulyApprox(result.answer.x, u_true, t0);
-	cout << "shold be: " << u_truly_approx.q << endl;
+	//lin_approx_t u_truly_approx = calcTrulyApprox(result.answer.x, u_true, t0);
+	//cout << "shold be: " << u_truly_approx.q << endl;
 
-	cout << "norm: " << norm(u_truly_approx.q, result.answer.q) << endl;
+	cout << "norm: " << norm(bind(u_true, placeholders::_1, t0), result.answer) << endl;
 
 	cout << endl << "---------------------------" << endl;
 }
@@ -254,7 +257,7 @@ auto sigma = [] (double x) -> double { return 1; };
 
 double a = 1, b = 2, n = 10; // Характеристики сетки по пространству
 double at = 0, bt = 1, nt = 10; // Характеристики сетки по времени
-double na = 0, nb = 1, nn = 1000; // Характеристики сетки по параметру t, в зависимости от которого меняются неравномерные сетки
+double na = 0, nb = 1, nn = 100; // Характеристики сетки по параметру t, в зависимости от которого меняются неравномерные сетки
 int sa = 5, sb = 200; // Характеристики сетки по размеру
 
 //-----------------------------------------------------------------------------
@@ -310,7 +313,7 @@ void writeFirstInvestigation() {
 			else
 				u.q.push_back(1);
 
-		lin_approx_t u_truly_approx = calcTrulyApprox(u.x, u_true, bt);
+		//lin_approx_t u_truly_approx = calcTrulyApprox(u.x, u_true, bt);
 
 		for (auto& j : lambdas) {
 			auto lambda = j.first;
@@ -320,7 +323,7 @@ void writeFirstInvestigation() {
 			int itersum = 0;
 			for (auto& k : result) itersum += k.iterations;
 
-			double residual = norm(u_truly_approx.q, result.back().answer.q);
+			double residual = norm(bind(u_true, placeholders::_1, bt), result.back().answer);
 
 			fout << "\\scalebox{.55}{\\tcell{$" << itersum << "$\\\\$" << write_for_latex_double(residual, 2) << "$}}" << ((j.second != lambdas.back().second) ? "\t" : "");
 		}
@@ -344,12 +347,12 @@ void writeGridInvestigation(
 	auto test_grid = [&resu, time, u_true, lambda] (const vector<double>& grid) -> pair<int, double> {
 		lin_approx_t u; u.x = grid;
 		for (int j = 0; j < u.x.size(); j++) u.q.push_back(1);
-		lin_approx_t u_truly_approx = calcTrulyApprox(u.x, u_true, bt);
+		//lin_approx_t u_truly_approx = calcTrulyApprox(u.x, u_true, bt);
 
 		auto result = solveByTime(calcRightPart(lambda, u_true, sigma), u_true, lambda, sigma, u, time, 0.001, 100);
 
 		int itersum = 0; for (auto& k : result) itersum += k.iterations;
-		double residual = norm(u_truly_approx.q, result.back().answer.q);
+		double residual = norm(bind(u_true, placeholders::_1, bt), result.back().answer);
 		if (residual > resu.second * 2 && resu.first != -1) residual = resu.second * 2;
 		if (itersum > resu.first * 2 && resu.first != -1) itersum = resu.first * 2;
 		return {itersum, residual};
@@ -370,16 +373,31 @@ void writeGridInvestigation(
 		fout << "\tr" << counter << "\ti" << counter;
 	}
 	fout << endl;
+
+	// Запускаем отложенные вычисления
+	vector<std::future<pair<int, double>>> results;
+	for (int i = 1; i <= nn; i++) {
+		double t = na + (nb-na) * i/nn;
+
+		for (auto& move : moves) {
+			results.push_back(async([move, t, test_grid]()->pair<int, double>{
+				vector<double> grid;
+				make_grid(grid, a, b, n, bind(move, placeholders::_1, t));
+				return test_grid(grid);
+			}));
+		}
+	}
+
+	auto it = results.begin();
 	for (int i = 1; i <= nn; i++) {
 		double t = na + (nb-na) * i/nn;
 		cout << "\r" << 100 * t << "      ";
 		fout << t << "\t" << resu.second << "\t" << resu.first;
 
-		vector<double> grid;
 		for (auto& move : moves) {
-			make_grid(grid, a, b, n, bind(move, placeholders::_1, t));
-			auto res = test_grid(grid);
-			fout << "\t" << res.second << "\t" << res.first;
+			auto value = it->get();
+			fout << "\t" << value.second << "\t" << value.first;
+			it++;
 		}
 
 		fout << endl;
@@ -398,12 +416,12 @@ void writeGridInvestigationTime(
 	auto test_grid = [u_true, lambda, resu] (const vector<double>& grid) -> pair<int, double> {
 		lin_approx_t u; make_grid(u.x, a, b, n);
 		for (int j = 0; j < u.x.size(); j++) u.q.push_back(u_true(u.x[j], at));
-		lin_approx_t u_truly_approx = calcTrulyApprox(u.x, u_true, bt);
+		//lin_approx_t u_truly_approx = calcTrulyApprox(u.x, u_true, bt);
 
 		auto result = solveByTime(calcRightPart(lambda, u_true, sigma), u_true, lambda, sigma, u, grid, 0.001, 100);
 
 		int itersum = 0; for (auto& k : result) itersum += k.iterations;
-		double residual = norm(u_truly_approx.q, result.back().answer.q);
+		double residual = norm(bind(u_true, placeholders::_1, bt), result.back().answer);
 		if (residual > resu.second * 2 && resu.first != -1) residual = resu.second * 2;
 		if (itersum > resu.first * 2 && resu.first != -1) itersum = resu.first * 2;
 		return {itersum, residual};
@@ -424,6 +442,37 @@ void writeGridInvestigationTime(
 		fout << "\tr" << counter << "\ti" << counter;
 	}
 	fout << endl;
+
+	// Запускаем отложенные вычисления
+	vector<std::future<pair<int, double>>> results;
+	for (int i = 1; i <= nn; i++) {
+		double t = na + (nb-na) * i/nn;
+
+		for (auto& move : moves) {
+			results.push_back(async([move, t, test_grid]()->pair<int, double>{
+				vector<double> grid;
+				make_grid(grid, at, bt, nt, bind(move, placeholders::_1, t));
+				return test_grid(grid);
+			}));
+		}
+	}
+
+	auto it = results.begin();
+	for (int i = 1; i <= nn; i++) {
+		double t = na + (nb-na) * i/nn;
+		cout << "\r" << 100 * t << "      ";
+		fout << t << "\t" << resu.second << "\t" << resu.first;
+
+		for (auto& move : moves) {
+			auto value = it->get();
+			fout << "\t" << value.second << "\t" << value.first;
+			it++;
+		}
+
+		fout << endl;
+	}
+	cout << endl;
+
 	for (int i = 1; i <= nn; i++) {
 		double t = na + (nb-na) * i/nn;
 		cout << "\r" << 100 * t << "      ";
@@ -461,12 +510,12 @@ void writeGridInvestigationSize(
 		lin_approx_t u;
 		make_grid(u.x, a, b, size);
 		for (int j = 0; j < u.x.size(); j++) u.q.push_back(u_true(u.x[j], at));
-		lin_approx_t u_truly_approx = calcTrulyApprox(u.x, u_true, bt);
+		//lin_approx_t u_truly_approx = calcTrulyApprox(u.x, u_true, bt);
 
 		auto result = solveByTime(calcRightPart(lambda, u_true, sigma), u_true, lambda, sigma, u, time, 0.001, 100);
 
 		int itersum = 0; for (auto& k : result) itersum += k.iterations;
-		double residual = norm(u_truly_approx.q, result.back().answer.q);
+		double residual = norm(bind(u_true, placeholders::_1, bt), result.back().answer);
 
 		residual /= size; // Важно! Так как если не разделить, то расстояние между каждым узлом будет в итоге уменьшаться, но раз мы их делаем всё больше и больше, то в сумме оно будет увеличиваться, и в итоге точность будет расти.
 
@@ -487,7 +536,7 @@ void writeGridInvestigationSizeTime(
 	lin_approx_t u;
 	make_grid(u.x, a, b, n);
 	for (int j = 0; j < u.x.size(); j++) u.q.push_back(u_true(u.x[j], at));
-	lin_approx_t u_truly_approx = calcTrulyApprox(u.x, u_true, bt);
+	//lin_approx_t u_truly_approx = calcTrulyApprox(u.x, u_true, bt);
 
 	fout << "size\titerations\tresidual" << endl;
 	for (int size = sa; size < sb; ++size) {
@@ -497,7 +546,7 @@ void writeGridInvestigationSizeTime(
 		auto result = solveByTime(calcRightPart(lambda, u_true, sigma), u_true, lambda, sigma, u, time, 0.001, 100);
 
 		int itersum = 0; for (auto& k : result) itersum += k.iterations;
-		double residual = norm(u_truly_approx.q, result.back().answer.q);
+		double residual = norm(bind(u_true, placeholders::_1, bt), result.back().answer);
 
 		residual /= size; // Важно! Так как если не разделить, то расстояние между каждым узлом будет в итоге уменьшаться, но раз мы их делаем всё больше и больше, то в сумме оно будет увеличиваться, и в итоге точность будет расти.
 
@@ -514,41 +563,64 @@ void writeGridInvestigationSizeTime(
 int main() {
 	init();
 
-	writeFirstInvestigation();
+	vector<thread> t;
 
+	/*t.emplace_back([](){
+	writeFirstInvestigation();
+	});*/
+
+	t.emplace_back([](){
 	writeGridInvestigation(
 		[] (double x, double t) -> double { return x*x*x*x + t; }, "$x^4+t$", 
 		"x4_space.txt",
 		[] (double u) -> double { return u*u; }, "$u^2$"
 	);
+	});
 
+	t.emplace_back([](){
 	writeGridInvestigation(
 		[] (double x, double t) -> double { return exp(x) + t; }, "$exp(x)+t$", 
 		"expx_space.txt",
 		[] (double u) -> double { return u*u; }, "$u^2$"
 	);
+	});
 
+	t.emplace_back([](){
 	writeGridInvestigationTime(
 		[] (double x, double t) -> double { return exp(x) + t*t*t; }, "$e^x+t^3$", 
 		"t3_time.txt",
 		[] (double u) -> double { return u; }, "$u$"
 	);
+	});
 
+	t.emplace_back([](){
 	writeGridInvestigationTime(
 		[] (double x, double t) -> double { return exp(x) + exp(t); }, "$e^x+e^t$", 
 		"expt_time.txt",
 		[] (double u) -> double { return u; }, "$u$"
 	);
+	});
 
+	/*t.emplace_back([](){
 	writeGridInvestigationSize(
 		[] (double x, double t) -> double { return exp(x) + exp(t); }, "$e^x+e^t$", 
 		"expx_expt_size_space.txt",
 		[] (double u) -> double { return u; }, "$u$"
 	);
+	});
 
+	t.emplace_back([](){
 	writeGridInvestigationSizeTime(
 		[] (double x, double t) -> double { return exp(x) + exp(t); }, "$e^x+e^t$", 
 		"expx_expt_size_time.txt",
 		[] (double u) -> double { return u; }, "$u$"
 	);
+	});*/
+
+	auto start = chrono::high_resolution_clock::now();
+	for (auto& i : t) i.join();
+	auto end = chrono::high_resolution_clock::now();
+	double time = chrono::duration_cast<chrono::seconds>(end-start).count();
+	cout << "time: " << time << endl;
+	system("pause");
 }

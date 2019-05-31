@@ -78,9 +78,9 @@ ostream& operator<<(ostream& out, const Result::ExitType& exit);
 
 //-----------------------------------------------------------------------------
 // Сравнение результатов
-lin_approx_t calcTrulyApprox(const vector<double>& grid, const Function2D& u_true, double time);
-lin_approx_t calcTrulyApprox(const vector<double>& grid, const Function1D& u_true);
-double norm(const vector<double>& a, const vector<double>& b); /// Считает норму между двумя векторами
+//lin_approx_t calcTrulyApprox(const vector<double>& grid, const Function2D& u_true, double time);
+//lin_approx_t calcTrulyApprox(const vector<double>& grid, const Function1D& u_true);
+//double norm(const vector<double>& a, const vector<double>& b); /// Считает норму между двумя векторами
 double norm(const Function1D& f, const lin_approx_t& b); /// Считает норму между функцией и линейной аппроксимацией функции
 
 //-----------------------------------------------------------------------------
