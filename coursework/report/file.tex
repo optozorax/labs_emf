@@ -1,0 +1,87 @@
+\newcommand{\ltcell}[1]{\begin{tabular}{@{}l@{}}#1\end{tabular}}
+
+% Собственные обозначения для дополнительной нумерации глав
+\setcounter{secnumdepth}{4} % Чтобы параграф отображался цифрами
+\newcommand{\myparagraph}[1]{\paragraph{#1}\mbox{}\\} % Аналог \subsubsubsection
+
+% Собственные обозначения для скобок
+\newcommand{\roubr}[1]{\left(#1\right)}  % round  brackets ()
+\newcommand{\sqbr}[1]{\left[#1\right]}   % sqaure brackets [] 
+\newcommand{\cubr}[1]{\left\{#1\right\}} % curtly brackets {}
+
+% Жирный текст в математике
+\newcommand{\mb}[1]{\mathbf{#1}}
+
+\newcommand{\myd}[1]{\operatorname{d}\!#1}
+
+% Дивергенция и градиент
+\newcommand{\mydiv}[0]{\operatorname{div}}
+\newcommand{\mygrad}[0]{\operatorname{grad}}
+\newcommand{\mypartial}[2]{\frac{\partial #1}{\partial #2}}
+\newcommand{\mypartialpow}[3]{\frac{\partial^{#3} #1}{\partial #2^{#3}}}
+\newcommand{\myintegral}[2]{\int\limits_{#1}^{#2}}
+
+Решаемое уравнение в общем виде в декартовой системе координат:
+
+$$ -\mydiv\roubr{\lambda\mygrad u} + \gamma u + \sigma \mypartial{u}{t} + \chi \mypartialpow{u}{t}{2} = f $$
+
+Первые краевые условия:
+
+Эквивалентная постановка в форме уравнения Галёркина:
+
+Аппроксимация уравнения Галёркина на конечномерных подпространствах:
+
+Формулы для билинейных базисных функций прямоугольных элементов:
+
+Аналитические выражения для вычисления элементов локальных матриц:
+
+$$ G_{ij} = \myintegral{x_p}{x_{p+1}}\myintegral{y_s}{y_{s+1}} \lambda\roubr{\mypartial{\psi_i}{x}\mypartial{\psi_j}{x} + \mypartial{\psi_i}{y}\mypartial{\psi_j}{y}} \myd{x} \myd{y} $$
+
+$$ M_{ij}^\gamma = \myintegral{x_p}{x_{p+1}}\myintegral{y_s}{y_{s+1}} \gamma \psi_i \psi_j \myd{x} \myd{y} $$
+
+$$ b_i = \myintegral{x_p}{x_{p+1}}\myintegral{y_s}{y_{s+1}} f \psi_i \myd{x} \myd{y} $$
+
+$$ \mb{G} = \frac{\bar{\lambda}}{6}\frac{h_y}{h_x}\begin{pmatrix}
+2 & -2 & 1 & -1 \\
+-2 & 2 & -1 & 1 \\
+1 & -1 & 2 & -2 \\
+-1 & 1 & -2 & 2
+\end{pmatrix} + \frac{\bar{\lambda}}{6}\frac{h_x}{h_y}\begin{pmatrix}
+2 & 1 & -2 & -1 \\
+1 & 2 & -1 & -2 \\
+-2 & -1 & 2 & 1 \\
+-1 & 2 & 1 & 2
+\end{pmatrix} $$
+
+$$ \mb{C} = \frac{h_x h_y}{36}\begin{pmatrix}
+4 & 2 & 2 & 1 \\
+2 & 4 & 1 & 2 \\
+2 & 1 & 4 & 2 \\
+1 & 2 & 2 & 4
+\end{pmatrix} $$
+
+$$ \mb{M}^\gamma = \bar{\gamma}\mb{C} $$
+
+$$ \mb{f} = \roubr{f_1, f_2, f_3, f_4}^t $$
+
+$$ \mb{b} = \mb{C}\cdot \mb{f} $$
+
+
+
+
+Схема Кранка-Николсона:
+
+$$ \mypartial{u}{t} = \frac{u^j-u^{j-2}}{2\Delta t} $$
+
+$$ \mypartialpow{u}{t}{2} = \frac{u^j-2u^{j-1}+u^{j-2}}{\Delta t^2} $$
+
+$$ u = \frac{u^j+u^{j-2}}{2} $$
+
+$$ f = \frac{f^j+f^{j-2}}{2} $$
+
+$$ -\mydiv\roubr{\lambda \mygrad\frac{u^j+u^{j-2}}{2}} + \gamma \frac{u^j+u^{j-2}}{2} + \sigma \frac{u^j - u^{j-2}}{2\Delta t} + \chi \frac{u^j-2u^{j-1}+u^{j-2}}{\Delta t^2} = \frac{f^j+f^{j-2}}{2} $$
+
+$$ \frac{1}{\Delta t^2} \mathbf{M}^\chi \mb{} $$
+
+% a = 0.5 * m + (cs.chi/dt/dt + cs.sigma/2.0/dt) * c + 0.5 * g;
+% b = 0.5 * (b0 + bll) - m * (cs.chi/dt/dt * (-2.0*ql + qll) - cs.sigma/2.0/dt * qll) - 0.5*g * qll - 0.5*m * qll;

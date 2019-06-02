@@ -1,0 +1,106 @@
+\documentclass[12pt]{article}
+
+\usepackage[russian]{babel}
+
+% xelatex
+\usepackage{fontspec}
+\setmainfont[
+  Ligatures=TeX,
+  Extension=.otf,
+  BoldFont=cmunbx,
+  ItalicFont=cmunti,
+  BoldItalicFont=cmunbi,
+]{cmunrm}
+\usepackage{polyglossia}
+\setdefaultlanguage{russian}
+\setotherlanguage{english}
+
+\usepackage{indentfirst}
+\frenchspacing
+
+% Для математики
+\usepackage{amssymb,amsmath}
+\usepackage{xfrac}
+\usepackage{mathtools}
+\setcounter{MaxMatrixCols}{20}
+\parindent=24pt
+\parskip=0pt
+\tolerance=2000
+
+% Для настройки размера страницы
+\usepackage{geometry}
+\geometry{
+	a4paper,
+	total={170mm,257mm},
+	left=20mm,
+	top=20mm,
+}
+
+% Для вставки графики
+\usepackage{graphicx}
+
+% Для таблиц
+\usepackage{longtable}
+\usepackage{multirow}
+\usepackage{tabu}
+\usepackage{colortbl}
+
+% Создаем команду, чтобы переносить текст на новую строку внутри таблицы
+\newcommand{\tcell}[2][c]{\begin{tabular}[#1]{@{}c@{}}#2\end{tabular}}
+\usepackage{makecell}
+
+% Пакет для списков
+\usepackage[ampersand]{easylist}
+
+% Для цветных таблиц
+\usepackage{tcolorbox}
+\tcbuselibrary{skins}
+\tcbuselibrary{breakable}
+
+\usepackage{textcomp}
+
+\begin{document}
+\begin{center}
+\hfill \break
+{\Large Министерство науки и высшего образования Российской Федерации}\\
+\hfill \break
+{\large Федеральное государственное бюджетное образовательное учреждение высшего образования}\\ 
+{\normalsize\textbf{<<НОВОСИБИРСКИЙ ГОСУДАРСТВЕННЫЙ ТЕХНИЧЕСКИЙ УНИВЕРСИТЕТ>>}}\\
+\hfill \break
+\includegraphics{nstu_logo.eps}\\
+{\large Кафедра прикладной математики}\\
+\hfill \break
+\hfill \break
+\hfill \break
+{\Large\textbf{РГЗ по курсу <<ТВиМС>>}}\\
+\hfill \break 
+{\Large Часть II}\\
+\hfill \break
+\hfill \break
+\hfill \break
+\hfill \break
+\hfill \break
+\begin{tabu}{ll}
+\textbf{Факультет:} & ПМИ \\
+\textbf{Группа:} & ПМ-63 \\
+\textbf{Студент:} & Шепрут И.И. \\
+\textbf{Вариант:} & 22 \\
+\textbf{Преподаватели:} & Постовалов С.Н.\\
+&Веретельникова И.В. \\
+\end{tabu} \\
+\hfill \break
+\hfill \break
+\hfill \break
+\hfill \break
+\hfill \break
+\hfill \break
+\hfill \break
+{\large Новосибирск\\2018}
+\end{center}
+\thispagestyle{empty}
+\newpage 
+\setcounter{page}{1}
+
+\input{file}
+
+\end{document}
