@@ -35,6 +35,7 @@ double non_linear_offset(double x, double t) {
 	t *= signt;
 	t = 1.0 - t;
 	t = (signt == -1) ? 1.0/t : t;
+	if (t == 1.0) return x;
 	return (1.0 - pow(t, x))/(1.0 - t);
 }
 
@@ -307,9 +308,29 @@ void calc_crank_nicolson_method(
 ) {
 	// Схема Кранка-Николсона
 	//a = 0.5 * m + (cs.chi/dt/dt + cs.sigma/2.0/dt) * c + 0.5 * g;
-	//b = 0.5 * (b0 + bll) - m * (cs.chi/dt/dt * (-2.0*ql + qll) - cs.sigma/2.0/dt * qll) - 0.5*g * qll - 0.5*m * qll; 
+	//b = 0.5 * (b0 + bll) - c * (cs.chi/dt/dt * (-2.0*ql + qll) - cs.sigma/2.0/dt * qll) - 0.5*g * qll - 0.5*m * qll; 
 
-	// TODO
+	a = m;
+	double dt = time_grid(time_i)-time_grid(time_i-1);
+	double c1 = (cs.chi/dt/dt + cs.sigma/2.0/dt);
+	for (int i = 0; i < a.l.size(); i++) {
+		a.l[i] = 0.5 * m.l[i] + c1 * c.l[i] + 0.5 * g.l[i];
+		a.u[i] = 0.5 * m.u[i] + c1 * c.u[i] + 0.5 * g.u[i];
+	}
+
+	vector_t temp = qll;
+	m.mul(temp);
+	b = -0.5 * temp;
+	
+	temp = qll;
+	g.mul(temp);
+	b = b - 0.5 * temp;
+
+	temp = cs.chi/dt/dt * (-2.0*ql + qll) - cs.sigma/2.0/dt * qll;
+	c.mul(temp);
+	b = b - temp;
+
+	b = b + 0.5 * (b0 + bll);
 
 	// Моя простая схема
 	//a = g  + m + (cs.chi/dt/dt + cs.sigma/2/dt) * c;

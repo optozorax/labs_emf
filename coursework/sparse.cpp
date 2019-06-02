@@ -242,6 +242,14 @@ void matrix_sparse_t::mul_u(vector_t& x_y) const {
 }
 
 //-----------------------------------------------------------------------------
+ostream& operator<<(ostream& out, const matrix_sparse_t& m) {
+	matrix_t dense;
+	m.to_dense(dense);
+	out << dense;
+	return out;
+}
+
+//-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 
@@ -282,7 +290,7 @@ matrix_sparse_t matrix_sparse_ra_t::to_sparse(void) const {
 	result.n = dm.size();
 	result.d = dm;
 	for (int i = 0; i < lm.size(); ++i) {
-		result.i[i+1] = result.i[i] + lm.size();
+		result.i[i+1] = result.i[i] + lm[i].size();
 		for (auto& j : lm[i]) {
 			result.j.push_back(j.first);
 			result.l.push_back(j.second);

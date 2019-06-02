@@ -8,7 +8,8 @@ using namespace placeholders;
 
 int main() {
 	constants_t c = {1, 1, 1, 1};
-	auto u = [] (double x, double y, double t) -> double { return exp(x*x*(y-t)) + t*t; };
+	//auto u = [] (double x, double y, double t) -> double { return exp(x*x*(y-t)) + t*t; };
+	auto u = [] (double x, double y, double t) -> double { return x*x + y*y + t*t; };
 	auto f = calc_right_part(u, c);
 	boundary_setter_t set_boundary_conditions = bind(write_first_boundary_conditions, _1, _2, _3, _4, u);
 
