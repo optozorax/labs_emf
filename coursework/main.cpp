@@ -14,9 +14,9 @@ int main() {
 	boundary_setter_t set_boundary_conditions = bind(write_first_boundary_conditions, _1, _2, _3, _4, u);
 
 	grid_t grid;
-	grid.calc(grid_generator_t(0, 1, 1), grid_generator_t(0, 1, 1));
+	grid.calc(grid_generator_t(0, 1, 100), grid_generator_t(0, 1, 100));
 
-	grid_generator_t time_grid(0, 1, 1);
+	grid_generator_t time_grid(0, 1, 3);
 
 	vector_t q0 = calc_true_approx(bind(u, _1, _2, time_grid(0)), grid.bes);
 	vector_t q1 = calc_true_approx(bind(u, _1, _2, time_grid(1)), grid.bes);
@@ -25,9 +25,10 @@ int main() {
 	auto res = solve_differential_equation(f, set_boundary_conditions, q0, q1, c, grid, time_grid);
 
 	double norm = (q-res.back()).norm();
-
 	cout << "norm: " << norm << endl;
-	cout << res.back() << endl;
+
+	double norm_integral = calc_integral_norm(bind(u, _1, _2, time_grid(time_grid.size() - 1)), grid.es, res.back());
+	cout << "norm integral: " << norm_integral << endl;
 
 	system("pause");
 }

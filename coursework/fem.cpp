@@ -21,8 +21,28 @@ double elem_t::get_hy(void) const {
 
 //-----------------------------------------------------------------------------
 double elem_t::value(double x, double y, const vector_t& q) const {
-	// TODO
-	return 0;
+	double xp = e[0]->x;
+	double xp1 = e[1]->x;
+	double ys = e[0]->y;
+	double ys1 = e[2]->y;
+	double hx = get_hx();
+	double hy = get_hy();
+	auto x1 = [xp1, hx](double x) -> double { return (xp1 - x) / hx; };
+	auto x2 = [xp, hx](double x) -> double { return (x - xp) / hx; };
+	auto y1 = [ys1, hy](double y) -> double { return (ys1 - y) / hy; };
+	auto y2 = [ys, hy](double y) -> double { return (y - ys) / hy; };
+
+	auto psi1 = [&]() -> double { return x1(x) * y1(y); };
+	auto psi2 = [&]() -> double { return x2(x) * y1(y); };
+	auto psi3 = [&]() -> double { return x1(x) * y2(y); };
+	auto psi4 = [&]() -> double { return x2(x) * y2(y); };
+
+	double v1 = psi1() * q[e[0]->i];
+	double v2 = psi2() * q[e[1]->i];
+	double v3 = psi3() * q[e[2]->i];
+	double v4 = psi4() * q[e[3]->i];
+
+	return v1 + v2 + v3 + v4;
 }
 
 //-----------------------------------------------------------------------------
@@ -98,6 +118,21 @@ vector_t calc_true_approx(const function_2d_t& u, const vector<basic_elem_t>& be
 	for (int i = 0; i < bes.size(); ++i)
 		result(i) = u(bes[i].x, bes[i].y);
 	return result;
+}
+
+//-----------------------------------------------------------------------------
+double calc_integral_norm(const function_2d_t& u, const vector<elem_t>& es, const vector_t& q) {
+	double sum = 0;
+	for (auto& i : es) {
+		sum += calc_integral_gauss3(
+			i.e[0]->x, i.e[1]->x, 5, 
+			i.e[0]->y, i.e[2]->y, 5,
+			[&](double x, double y) -> double {
+				return fabs(u(x, y) - i.value(x, y, q));
+			}
+		);
+	}
+	return sum;
 }
 
 //-----------------------------------------------------------------------------

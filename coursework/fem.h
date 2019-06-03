@@ -81,6 +81,9 @@ public:
 /** Рассчитать веса идеальной аппроксимации функции u при помощи узлов bes. */
 vector_t calc_true_approx(const function_2d_t& u, const vector<basic_elem_t>& bes);
 
+/** Рассчитать интегральную норму между конечно-элементной аппроксимацией и истинной функцией. */
+double calc_integral_norm(const function_2d_t& u, const vector<elem_t>& es, const vector_t& q);
+
 //-----------------------------------------------------------------------------
 /* Расчет локальных матриц для конечного элемента. */
 matrix_t calc_local_matrix_g(const elem_t& e, const constants_t& cs);
