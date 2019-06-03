@@ -313,6 +313,9 @@ void calc_crank_nicolson_method(
 	a = m;
 	double dt = time_grid(time_i)-time_grid(time_i-1);
 	double c1 = (cs.chi/dt/dt + cs.sigma/2.0/dt);
+	for (int i = 0; i < a.d.size(); i++) {
+		a.d[i] = 0.5 * m.d[i] + c1 * c.d[i] + 0.5 * g.d[i];
+	}
 	for (int i = 0; i < a.l.size(); i++) {
 		a.l[i] = 0.5 * m.l[i] + c1 * c.l[i] + 0.5 * g.l[i];
 		a.u[i] = 0.5 * m.u[i] + c1 * c.u[i] + 0.5 * g.u[i];

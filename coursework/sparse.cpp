@@ -10,11 +10,11 @@ matrix_sparse_t::matrix_sparse_t(int n) : n(n) {
 void matrix_sparse_t::to_dense(matrix_t& m) const {
 	m = matrix_t(n, n);
 	m.fill(0);
-	for (int i = 0; i < n; ++i) {
-		m(i, i) = d[i];
-		for (int j = 0; j < line_elem_count(i); ++j) {
-			m(i, line_elem_row(i, j)) = l[line_elem_start(i) + j];
-			m(line_elem_row(i, j), i) = u[line_elem_start(i) + j];
+	for (int _i = 0; _i < n; ++_i) {
+		m(_i, _i) = d[_i];
+		for (int _j = 0; _j < line_elem_count(_i); ++_j) {
+			m(_i, line_elem_row(_i, _j)) = l[line_elem_start(_i) + _j];
+			m(line_elem_row(_i, _j), _i) = u[line_elem_start(_i) + _j];
 		}
 	}
 }
@@ -260,11 +260,11 @@ matrix_sparse_ra_t::matrix_sparse_ra_t(int n) : n(n), dm(n, 0), lm(n), um(n) {}
 double& matrix_sparse_ra_t::operator()(int i, int j) {
 	if (i == j) {
 		return dm[i];
-	} else if (i < j) {
-		um[j][i] += 0;
+	} else if (i > j) {
+		um[i][j] += 0;
 		return lm[i][j];
 	} else {
-		lm[i][j] += 0;
+		lm[j][i] += 0;
 		return um[j][i];
 	}
 }
@@ -273,8 +273,8 @@ double& matrix_sparse_ra_t::operator()(int i, int j) {
 const double& matrix_sparse_ra_t::operator()(int i, int j) const {
 	if (i == j) {
 		return dm[i];
-	} else if (i < j) {
-		if (lm[i].find(i) != lm[j].end())
+	} else if (i > j) {
+		if (lm[i].find(j) != lm[i].end())
 			return lm[i].at(j);
 	} else {
 		if (um[j].find(i) != um[i].end())
