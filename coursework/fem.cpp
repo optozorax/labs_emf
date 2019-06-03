@@ -321,11 +321,11 @@ function_3d_t calc_right_part(
 void calc_crank_nicolson_method(
 	const matrix_sparse_t& c,
 	const matrix_sparse_t& g,
-	const vector_t& b0, // b current (b_j)
-	const vector_t& bl, // b last (b_{j-1})
-	const vector_t& bll, // b last last (b_{j-2})
-	const vector_t& ql, // q last (q_{j-1})
-	const vector_t& qll, // q last last (q_{j-2})
+	const vector_t& b0,
+	const vector_t& bl,
+	const vector_t& bll,
+	const vector_t& ql,
+	const vector_t& qll,
 	const constants_t& cs,
 	const grid_generator_t& time_grid,
 	int time_i,
