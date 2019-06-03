@@ -180,14 +180,6 @@ matrix_t calc_local_matrix_c(
 }
 
 //-----------------------------------------------------------------------------
-matrix_t calc_local_matrix_m(
-	const elem_t& e,
-	const constants_t& cs
-) {
-	return cs.gamma * calc_local_matrix_c(e);
-}
-
-//-----------------------------------------------------------------------------
 vector_t calc_local_vector_b(
 	const elem_t& e,
 	const function_2d_t& f
@@ -328,7 +320,6 @@ function_3d_t calc_right_part(
 //-----------------------------------------------------------------------------
 void calc_crank_nicolson_method(
 	const matrix_sparse_t& c,
-	const matrix_sparse_t& m,
 	const matrix_sparse_t& g,
 	const vector_t& b0, // b current (b_j)
 	const vector_t& bl, // b last (b_{j-1})
@@ -342,37 +333,37 @@ void calc_crank_nicolson_method(
 	vector_t& b
 ) {
 	// Схема Кранка-Николсона
-	//a = 0.5 * m + (cs.chi/dt/dt + cs.sigma/2.0/dt) * c + 0.5 * g;
-	//b = 0.5 * (b0 + bll) - c * (cs.chi/dt/dt * (-2.0*ql + qll) - cs.sigma/2.0/dt * qll) - 0.5*g * qll - 0.5*m * qll; 
 
-	a = m;
-	double dt = time_grid(time_i)-time_grid(time_i-1);
-	double c1 = (cs.chi/dt/dt + cs.sigma/2.0/dt);
-	for (int i = 0; i < a.d.size(); i++) {
-		a.d[i] = 0.5 * m.d[i] + c1 * c.d[i] + 0.5 * g.d[i];
-	}
+	// Константы для вычислений с неравномерной сеткой по времени
+	double t0 = time_grid(time_i);
+	double t1 = time_grid(time_i-1);
+	double t2 = time_grid(time_i-2);
+
+	double d1 = t0-t2;
+	double d2 = (t0*(t0-t2-t1)+t2*t1)/2.0;
+	double m1 = (t0-t2)/(t1-t2);
+	double m2 = (t0-t1)/(t1-t2);
+
+	// Вычисляемт матрицу a
+	a = c;
+	double c1 = cs.gamma/2.0 + cs.sigma/d1 + cs.chi/d2;
+	for (int i = 0; i < a.d.size(); i++)
+		a.d[i] = g.d[i]/2.0 + c.d[i]*c1;
 	for (int i = 0; i < a.l.size(); i++) {
-		a.l[i] = 0.5 * m.l[i] + c1 * c.l[i] + 0.5 * g.l[i];
-		a.u[i] = 0.5 * m.u[i] + c1 * c.u[i] + 0.5 * g.u[i];
+		a.l[i] = g.l[i]/2.0 + c.l[i]*c1;
+		a.u[i] = g.u[i]/2.0 + c.u[i]*c1;
 	}
 
+	// Рассчитываем вектор b
+	b = (b0 + bll)/2.0;
 	vector_t temp = qll;
-	m.mul(temp);
-	b = -0.5 * temp;
-	
-	temp = qll;
 	g.mul(temp);
-	b = b - 0.5 * temp;
+	b = b - temp/2.0;
 
-	temp = cs.chi/dt/dt * (-2.0*ql + qll) - cs.sigma/2.0/dt * qll;
+	temp = ql*(m1*cs.chi/d2) + qll*(-cs.gamma/2.0 + cs.sigma/d1 - m2*cs.chi/d2);
 	c.mul(temp);
-	b = b - temp;
 
-	b = b + 0.5 * (b0 + bll);
-
-	// Моя простая схема
-	//a = g  + m + (cs.chi/dt/dt + cs.sigma/2/dt) * c;
-	//b = b0 + c * (2*cs.chi/dt/dt * ql + (cs.sigma/2/dt - cs.chi/dt/dt) * qll);
+	b = b + temp;
 }
 
 //-----------------------------------------------------------------------------
@@ -411,7 +402,6 @@ vector<vector_t> solve_differential_equation(
 	const grid_generator_t& time_grid
 ) {
 	auto c = calc_global_matrix(grid.es, calc_local_matrix_c, grid.n);
-	auto m = calc_global_matrix(grid.es, bind(calc_local_matrix_m, _1, cs), grid.n);
 	auto g = calc_global_matrix(grid.es, bind(calc_local_matrix_g, _1, cs), grid.n);
 
 	auto calc_global_vector_b = [&] (int i) {
@@ -442,7 +432,7 @@ vector<vector_t> solve_differential_equation(
 	vector_t b(grid.n);
 	for (int i = 2; i < time_grid.size(); ++i) {
 		b0 = calc_global_vector_b(i);
-		calc_crank_nicolson_method(c, m, g, b0, bl, bll, ql, qll, cs, time_grid, i, a, b);
+		calc_crank_nicolson_method(c, g, b0, bl, bll, ql, qll, cs, time_grid, i, a, b);
 		set_boundary_conditions(a, b, grid.bes, time_grid(i));
 		
 		q = solve_by_los_lu(a, b, 1000, 1e-16, false);

@@ -88,7 +88,6 @@ double calc_integral_norm(const function_2d_t& u, const vector<elem_t>& es, cons
 /* Расчет локальных матриц для конечного элемента. */
 matrix_t calc_local_matrix_g(const elem_t& e, const constants_t& cs);
 matrix_t calc_local_matrix_c(const elem_t& e);
-matrix_t calc_local_matrix_m(const elem_t& e, const constants_t& cs);
 vector_t calc_local_vector_b(const elem_t& e, const function_2d_t& f);
 
 //-----------------------------------------------------------------------------
@@ -131,7 +130,6 @@ function_3d_t calc_right_part(const function_3d_t& u, const constants_t& cs);
 /** Использует схему Кранка-Николсона для получения СЛАУ. Предполагается, что разряженные матрицы имеют одинаковый формат. */
 void calc_crank_nicolson_method(
 	const matrix_sparse_t& c,
-	const matrix_sparse_t& m,
 	const matrix_sparse_t& g,
 	const vector_t& b0,  // b current (b_j)
 	const vector_t& bl,  // b last (b_{j-1})

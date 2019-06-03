@@ -81,7 +81,29 @@ $$ f = \frac{f^j+f^{j-2}}{2} $$
 
 $$ -\mydiv\roubr{\lambda \mygrad\frac{u^j+u^{j-2}}{2}} + \gamma \frac{u^j+u^{j-2}}{2} + \sigma \frac{u^j - u^{j-2}}{2\Delta t} + \chi \frac{u^j-2u^{j-1}+u^{j-2}}{\Delta t^2} = \frac{f^j+f^{j-2}}{2} $$
 
-$$ \frac{1}{\Delta t^2} \mathbf{M}^\chi \mb{} $$
+Подставляя это в уравнение Галёркина, получаем СЛАУ:
+
+$$ \roubr{\frac{\mb{G}}{2} + \frac{\mb{M}^\gamma}{2} + \frac{\mb{M}^\sigma}{2\Delta t} + \frac{\mb{M}^\chi}{\Delta t^2}}\mb{q}^j = \frac{\roubr{\mb{b}^j+\mb{b}^{j-2}}}{2} - \frac{\mb{G}\mb{q}^{j-2}}{2} - \frac{\mb{M}^\gamma\mb{q}^{j-2}}{2} + \frac{\mb{M}^\sigma \mb{q}^{j-2}}{2\Delta t} - \frac{\mb{M}^\chi \roubr{-2\mb{q}^{j-1} + \mb{q}^{j-2}}}{\Delta t^2} $$
+
+В нашем случае, так как $\gamma$, $\sigma$, $\chi$ являются константами, можно записать:
+
+$$ \roubr{\frac{\mb{G}}{2} + \mb{C}\roubr{\frac{\gamma}{2} + \frac{\sigma}{2\Delta t} + \frac{\chi}{\Delta t^2}}}\mb{q}^j = \frac{\roubr{\mb{b}^j+\mb{b}^{j-2}}}{2} - \frac{\mb{G}\mb{q}^{j-2}}{2} + \mb{C}\roubr{\mb{q}^{j-1}\frac{2\chi}{\Delta t^2} + \mb{q}^{j-2}\roubr{-\frac{\gamma}{2}+\frac{\sigma}{2\Delta t}-\frac{\chi}{\Delta t^2}}} $$
+
+Для неравномерной же сетки по времени имеем только отличие в:
+
+$$ t_2 = t^{j-2},\quad t_1 = t^{j-1},\quad t_0 = t^j $$
+
+$$ \mypartial{u}{t} = \frac{u^j-u^{j-2}}{t_2-t_1} = \frac{u^j-u^{j-2}}{d_1} $$
+
+$$ \mypartialpow{u}{t}{2} = 2\frac{u^j-u^{j-1}\frac{t_0-t_2}{t_1-t_2}+u^{j-2}\frac{t_0-t_1}{t_1-t_2}}{t_0\roubr{t_0-t_1-t_2} + t_1 t_2} = \frac{u^j-u^{j-1}m_1+u^{j-2}m_2}{d_2} $$
+
+Эти выражения были упрощены при помощи замен:
+
+$$ d_1 = t_2-t_1, \quad d_2 = \frac{t_0\roubr{t_0-t_1-t_2} + t_1 t_2}{2}, \quad m_1 = \frac{t_0-t_2}{t_1-t_2}, \quad m_2 = \frac{t_0-t_1}{t_1-t_2} $$ 
+
+И итоговый результат будет:
+
+$$ \roubr{\frac{\mb{G}}{2} + \mb{C}\roubr{\frac{\gamma}{2} + \frac{\sigma}{d_1} + \frac{\chi}{d_2}}}\mb{q}^j = \frac{\roubr{\mb{b}^j+\mb{b}^{j-2}}}{2} - \frac{\mb{G}\mb{q}^{j-2}}{2} + \mb{C}\roubr{\mb{q}^{j-1}\frac{m_1\chi}{d_2} + \mb{q}^{j-2}\roubr{-\frac{\gamma}{2}+\frac{\sigma}{d_1}-\frac{m_2\chi}{d_2}}} $$
 
 % a = 0.5 * m + (cs.chi/dt/dt + cs.sigma/2.0/dt) * c + 0.5 * g;
 % b = 0.5 * (b0 + bll) - m * (cs.chi/dt/dt * (-2.0*ql + qll) - cs.sigma/2.0/dt * qll) - 0.5*g * qll - 0.5*m * qll;
