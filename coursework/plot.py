@@ -12,10 +12,15 @@ from matplotlib import ticker, cm
 
 DPI = 200
 
+
+
 if __name__ == '__main__':
-	x = numpy.loadtxt("space_nonlinear_grid.x.txt")
-	y = numpy.loadtxt("space_nonlinear_grid.y.txt")
-	z = numpy.loadtxt("space_nonlinear_grid.data.txt")
+	plt.rc('text', usetex=True)
+	plt.rc('font', family='serif')
+
+	x = numpy.loadtxt("space_tgrid_2.x.txt")
+	y = numpy.loadtxt("space_tgrid_2.y.txt")
+	z = numpy.loadtxt("space_tgrid_2.data.txt")
 
 	X, Y = np.meshgrid(x, y)
 
@@ -24,9 +29,9 @@ if __name__ == '__main__':
 	cs = ax.contourf(X, Y, z, 55, cmap=cm.coolwarm)
 	cbar = fig.colorbar(cs)
 
-	plt.title('Graph', fontsize=19)
-	plt.xlabel('X', fontsize=10)
-	plt.ylabel('Y', fontsize=10)
+	plt.title(r'Graph', fontsize=19)
+	plt.xlabel(r'$t_x$', fontsize=10)
+	plt.ylabel(r'$t_y$', fontsize=10)
 	plt.tick_params(axis='both', labelsize=8)
 	plt.grid(alpha=0.5)
 	plt.savefig('pic.png', dpi=DPI)
