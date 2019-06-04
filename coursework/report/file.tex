@@ -1,4 +1,4 @@
-\pgfplotstableset{
+﻿\pgfplotstableset{
 	begin table={\rowcolors{2}{gray!25}{white}\begin{tabular}},
 	end table=\end{tabular},
 }
@@ -7,6 +7,9 @@
 \newcommand{\roubr}[1]{\left(#1\right)}  % round  brackets ()
 \newcommand{\sqbr}[1]{\left[#1\right]}   % sqaure brackets [] 
 \newcommand{\cubr}[1]{\left\{#1\right\}} % curtly brackets {}
+
+% Обозначение для описания выводов.
+\newcommand{\conclusion}[0]{\noindent\textbf{Вывод: }}
 
 % Жирный текст в математике
 \newcommand{\mb}[1]{\mathbf{#1}}
@@ -22,25 +25,88 @@
 
 \section{Теория}
 
-Решаемое уравнение в общем виде в декартовой системе координат:
+Решаемое уравнение в общем виде:
 
 $$ -\mydiv\roubr{\lambda\mygrad u} + \gamma u + \sigma \mypartial{u}{t} + \chi \mypartialpow{u}{t}{2} = f $$
 
+Решаемое уравнение в декартовой двумерной системе координат:
+
+$$ -\mypartial{}{x}\roubr{\lambda\mypartial{u}{x}} - \mypartial{}{y}\roubr{\lambda\mypartial{u}{y}} + \gamma u + \sigma \mypartial{u}{t} + \chi \mypartialpow{u}{t}{2} = f $$
+
 Первые краевые условия:
 
-Эквивалентная постановка в форме уравнения Галёркина:
-
-Аппроксимация уравнения Галёркина на конечномерных подпространствах:
+$$ u|_{S} = u_s $$
 
 Формулы для билинейных базисных функций прямоугольных элементов:
+
+\begin{center}\noindent\begin{tabular}{cc}
+$\displaystyle X_1(x) = \frac{x_{p+1}-x}{h_x} $ & $\displaystyle h_x = x_{p+1}-x_p $ \\
+$\displaystyle X_2(x) = \frac{x-x_p}{h_x} $ & $\displaystyle h_y = y_{s+1}-x_s $ \\
+$\displaystyle Y_1(y) = \frac{y_{s+1}-y}{h_y} $ & $\displaystyle x \in [x_p, x_{p+1}],\, y \in [y_s, y_{s+1}] $ \\
+$\displaystyle Y_2(y) = \frac{y-y_s}{h_y} $ & $\displaystyle \Omega_{ps} = [x_p, x_{p+1}] \times [y_s, y_{s+1}] $
+\end{tabular}\end{center}
+
+\begin{center}
+\begin{tikzpicture};
+	\tikzstyle{ann} = [fill=white,font=\footnotesize,inner sep=0.5pt];
+	\coordinate (O) at ($ (0, 0) $);
+	\coordinate [label=right:$x$] (X) at ($ (5, 0) $);
+	\coordinate [label=right:$y$] (Y) at ($ (0, 4.5) $);
+	\coordinate (MX) at ($ (-0.5, 0) $);
+	\coordinate (MY) at ($ (0, -0.5) $);
+
+	\coordinate [label=above right:$1$] (A) at ($ (1,1) $);
+	\coordinate [label=above left:$2$] (B) at ($ (4,1) $);
+	\coordinate [label=below right:$3$] (C) at ($ (1,3.5) $);
+	\coordinate [label=below left:$4$] (D) at ($ (4,3.5) $);
+
+	\coordinate [label=below:$x_p$] (A1) at ($ (1,0) $);
+	\coordinate [label=below:$x_{p+1}$] (B1) at ($ (4,0) $);
+	\coordinate [label=left:$y_s$] (A2) at ($ (0,1) $);
+	\coordinate [label=left:$y_{s+1}$] (C1) at ($ (0,3.5) $);
+
+	\draw[-] (MX) -- (O);
+	\draw[-] (MY) -- (O);
+	\draw[->] (O) -- (X);
+	\draw[->] (O) -- (Y);
+
+	\draw[-, line width=1pt] (A) -- (B);
+	\draw[-, line width=1pt] (B) -- (D);
+	\draw[-, line width=1pt] (D) -- (C);
+	\draw[-, line width=1pt] (C) -- (A);
+	\fill [black] (A) circle (1.5pt);
+	\fill [black] (B) circle (1.5pt);
+	\fill [black] (C) circle (1.5pt);
+	\fill [black] (D) circle (1.5pt);
+	\draw[-,dashed,very thin] (A) -- (A1);
+	\draw[-,dashed,very thin] (A) -- (A2);
+	\draw[-,dashed,very thin] (B) -- (B1);
+	\draw[-,dashed,very thin] (C) -- (C1);
+
+	\node[scale=2] at (2.5, 2.25) {$\Omega$};
+
+	\node[right] at (5.5, 1) {$\displaystyle \psi_1(x, y) = X_1(x) Y_1(y) $};
+	\node[right] at (5.5, 2) {$\displaystyle \psi_2(x, y) = X_1(x) Y_2(y) $};
+	\node[right] at (5.5, 3) {$\displaystyle \psi_3(x, y) = X_2(x) Y_1(y) $};
+	\node[right] at (5.5, 4) {$\displaystyle \psi_4(x, y) = X_2(x) Y_2(y) $};
+
+	\draw[<->] ($(A)!0.5!(A1)$) -- ($(B)!0.5!(B1)$) node [midway, ann] {$h_x$};
+	\draw[<->] ($(A)!0.5!(A2)$) -- ($(C)!0.5!(C1)$) node [midway, ann] {$h_y$};
+\end{tikzpicture}
+\end{center}
+
+И значение конечно-элементной аппроксимации на этом конечном элементе равно:
+$$ u^{*}_{ps}(x, y) = \sum_{i=1}^4 q_i \psi_i(x, y)  $$
 
 Аналитические выражения для вычисления элементов локальных матриц:
 
 $$ G_{ij} = \myintegral{x_p}{x_{p+1}}\myintegral{y_s}{y_{s+1}} \lambda\roubr{\mypartial{\psi_i}{x}\mypartial{\psi_j}{x} + \mypartial{\psi_i}{y}\mypartial{\psi_j}{y}} \myd{x} \myd{y} $$
 
-$$ M_{ij}^\gamma = \myintegral{x_p}{x_{p+1}}\myintegral{y_s}{y_{s+1}} \gamma \psi_i \psi_j \myd{x} \myd{y} $$
+\begin{center}
+$\displaystyle M_{ij}^\gamma = \myintegral{x_p}{x_{p+1}}\myintegral{y_s}{y_{s+1}} \gamma \psi_i \psi_j \myd{x} \myd{y} $, $\displaystyle \quad b_i = \myintegral{x_p}{x_{p+1}}\myintegral{y_s}{y_{s+1}} f \psi_i \myd{x} \myd{y} $
+\end{center}
 
-$$ b_i = \myintegral{x_p}{x_{p+1}}\myintegral{y_s}{y_{s+1}} f \psi_i \myd{x} \myd{y} $$
+Вычисленные матрицы для билинейных прямоугольных элементов:
 
 $$ \mb{G} = \frac{\bar{\lambda}}{6}\frac{h_y}{h_x}\begin{pmatrix}
 2 & -2 & 1 & -1 \\
@@ -54,32 +120,34 @@ $$ \mb{G} = \frac{\bar{\lambda}}{6}\frac{h_y}{h_x}\begin{pmatrix}
 -1 & -2 & 1 & 2
 \end{pmatrix} $$
 
-$$ \mb{C} = \frac{h_x h_y}{36}\begin{pmatrix}
+\begin{center}
+\begin{tabular}{cc}
+\multirow{3}{*}{$\displaystyle \mb{C} = \frac{h_x h_y}{36}\begin{pmatrix}
 4 & 2 & 2 & 1 \\
 2 & 4 & 1 & 2 \\
 2 & 1 & 4 & 2 \\
 1 & 2 & 2 & 4
-\end{pmatrix} $$
-
-$$ \mb{M}^\gamma = \bar{\gamma}\mb{C} $$
-
-$$ \mb{f} = \roubr{f_1, f_2, f_3, f_4}^t $$
-
-$$ \mb{b} = \mb{C}\cdot \mb{f} $$
+\end{pmatrix} $} & $ \mb{M}^\gamma = \bar{\gamma}\mb{C} $ \\[1.25ex]
+& $ \mb{f} = \roubr{f_1, f_2, f_3, f_4}^t $ \\[1.25ex]
+& $ \mb{b} = \mb{C}\cdot \mb{f} $
+\end{tabular}
+\end{center}
 
 Схема Кранка-Николсона:
 
-$$ \mypartial{u}{t} = \frac{u^j-u^{j-2}}{2\Delta t} $$
+\begin{center}
+$\displaystyle \mypartial{u}{t} = \frac{u^j-u^{j-2}}{2\Delta t} $, $\displaystyle \quad \mypartialpow{u}{t}{2} = \frac{u^j-2u^{j-1}+u^{j-2}}{\Delta t^2} $
+\end{center}
 
-$$ \mypartialpow{u}{t}{2} = \frac{u^j-2u^{j-1}+u^{j-2}}{\Delta t^2} $$
+\begin{center}
+$\displaystyle u = \frac{u^j+u^{j-2}}{2} $, $\displaystyle \quad f = \frac{f^j+f^{j-2}}{2} $
+\end{center}
 
-$$ u = \frac{u^j+u^{j-2}}{2} $$
+\begin{center}
+$\displaystyle -\mydiv\roubr{\lambda \mygrad\frac{u^j+u^{j-2}}{2}} + \gamma \frac{u^j+u^{j-2}}{2} + \sigma \frac{u^j - u^{j-2}}{2\Delta t} + \chi \frac{u^j-2u^{j-1}+u^{j-2}}{\Delta t^2} = \frac{f^j+f^{j-2}}{2} $
+\end{center}
 
-$$ f = \frac{f^j+f^{j-2}}{2} $$
-
-$$ -\mydiv\roubr{\lambda \mygrad\frac{u^j+u^{j-2}}{2}} + \gamma \frac{u^j+u^{j-2}}{2} + \sigma \frac{u^j - u^{j-2}}{2\Delta t} + \chi \frac{u^j-2u^{j-1}+u^{j-2}}{\Delta t^2} = \frac{f^j+f^{j-2}}{2} $$
-
-Подставляя это в уравнение Галёркина, получаем СЛАУ:
+Подставляя это в уравнение Галёркина, получаем СЛАУ из глобальных матриц:
 
 $$ \roubr{\frac{\mb{G}}{2} + \frac{\mb{M}^\gamma}{2} + \frac{\mb{M}^\sigma}{2\Delta t} + \frac{\mb{M}^\chi}{\Delta t^2}}\mb{q}^j = \frac{\roubr{\mb{b}^j+\mb{b}^{j-2}}}{2} - \frac{\mb{G}\mb{q}^{j-2}}{2} - \frac{\mb{M}^\gamma\mb{q}^{j-2}}{2} + \frac{\mb{M}^\sigma \mb{q}^{j-2}}{2\Delta t} - \frac{\mb{M}^\chi \roubr{-2\mb{q}^{j-1} + \mb{q}^{j-2}}}{\Delta t^2} $$
 
@@ -93,7 +161,7 @@ $$ t_2 = t^{j-2},\quad t_1 = t^{j-1},\quad t_0 = t^j $$
 
 $$ \mypartial{u}{t} = \frac{u^j-u^{j-2}}{t_2-t_1} = \frac{u^j-u^{j-2}}{d_1} $$
 
-$$ \mypartialpow{u}{t}{2} = 2\frac{u^j-u^{j-1}\frac{t_0-t_2}{t_1-t_2}+u^{j-2}\frac{t_0-t_1}{t_1-t_2}}{t_0\roubr{t_0-t_1-t_2} + t_1 t_2} = \frac{u^j-u^{j-1}m_1+u^{j-2}m_2}{d_2} $$
+$$ \mypartialpow{u}{t}{2} = 2\frac{u^j-u^{j-1}\cfrac{t_0-t_2}{t_1-t_2}+u^{j-2}\cfrac{t_0-t_1}{t_1-t_2}}{t_0\roubr{t_0-t_1-t_2} + t_1 t_2} = \frac{u^j-u^{j-1}m_1+u^{j-2}m_2}{d_2} $$
 
 Эти выражения были упрощены при помощи замен:
 
@@ -103,15 +171,175 @@ $$ d_1 = t_0-t_2, \quad d_2 = \frac{t_0\roubr{t_0-t_1-t_2} + t_1 t_2}{2}, \quad 
 
 $$ \roubr{\frac{\mb{G}}{2} + \mb{C}\roubr{\frac{\gamma}{2} + \frac{\sigma}{d_1} + \frac{\chi}{d_2}}}\mb{q}^j = \frac{\roubr{\mb{b}^j+\mb{b}^{j-2}}}{2} - \frac{\mb{G}\mb{q}^{j-2}}{2} + \mb{C}\roubr{\mb{q}^{j-1}\frac{m_1\chi}{d_2} + \mb{q}^{j-2}\roubr{-\frac{\gamma}{2}+\frac{\sigma}{d_1}-\frac{m_2\chi}{d_2}}} $$
 
+\section{Структуры данных}
+
+\noindent\textbf{Для задания сетки используется класс:}
+
+\begin{minted}[
+	breaklines,
+	breakanywhere=true,
+	autogobble,
+	linenos,
+	numbersep=1mm,
+	mathescape, 
+	fontsize=\fontsize{8}{8}\selectfont, 
+	tabsize=4
+]{c++}
+class grid_generator_t
+{
+public:
+	grid_generator_t(double a, double b, int n, double t = 0);
+	double operator()(int i) const;
+	int size(void) const;
+	double back(void) const;
+private:
+	double a, len, t, n1;
+};
+\end{minted}
+
+\noindent\textbf{Для задания узла конечного элемента структура:}
+
+\begin{minted}[
+	breaklines,
+	breakanywhere=true,
+	autogobble,
+	linenos,
+	numbersep=1mm,
+	mathescape, 
+	fontsize=\fontsize{8}{8}\selectfont, 
+	tabsize=4
+]{c++}
+struct basic_elem_t
+{
+	int i; /// Номер узла
+
+	double x, y; /// Координаты узла
+
+	basic_elem_t *up, *down, *left, *right; /// Указатели на соседей узла
+
+	/** Проверяет, является ли элемент граничным. Он таким явлется, если у него нет хотя бы одного соседа. */
+	bool is_boundary(void) const;
+};
+\end{minted}
+
+\noindent\textbf{Для задания конечного элемента используется структура:}
+
+\begin{minted}[
+	breaklines,
+	breakanywhere=true,
+	autogobble,
+	linenos,
+	numbersep=1mm,
+	mathescape, 
+	fontsize=\fontsize{8}{8}\selectfont, 
+	tabsize=4
+]{c++}
+struct elem_t
+{
+	int i; /// Номер конечного элемента
+	basic_elem_t* e[4]; /// Указатели на все 4 элемента конечного узла, нумерация такая:
+	/** 
+		 Y
+		 ^  3 +-----+ 4
+		 |    |     |
+		 |  1 +-----+ 2
+		-+--------------> X
+		 |
+	 */
+
+	double get_hx(void) const; /// Ширина конечного элемента
+	double get_hy(void) const; /// Высота конечного элемента
+
+	/** Рассчитать значение внутри конечного элемента. q - вектор рассчитыванных весов. */
+	double value(double x, double y, const vector_t& q) const;
+};
+\end{minted}
+
+\noindent\textbf{Прямоугольная сетка задается и вычисляется с помощью класса:}
+
+\begin{minted}[
+	breaklines,
+	breakanywhere=true,
+	autogobble,
+	linenos,
+	numbersep=1mm,
+	mathescape, 
+	fontsize=\fontsize{8}{8}\selectfont, 
+	tabsize=4
+]{c++}
+class grid_t
+{
+public:
+	vector<elem_t> es; /// Массив конечных элементов сетки
+	vector<basic_elem_t> bes; /// Массив узлов сетки
+	int n; /// Число узлов
+
+	/** Рассчитать неравномерную сетку. */
+	void calc(const grid_generator_t& gx, const grid_generator_t& gy);
+};
+\end{minted}
+
+Локальные матрицы формируются, получая на вход конечный элемент \texttt{elem\_t}.
+
+Для генерации разреженной матрицы используется класс с возможностью произвольного доступа к элементам:
+
+\begin{minted}[
+	breaklines,
+	breakanywhere=true,
+	autogobble,
+	linenos,
+	numbersep=1mm,
+	mathescape, 
+	fontsize=\fontsize{8}{8}\selectfont, 
+	tabsize=4
+]{c++}
+class matrix_sparse_ra_t
+{
+public:
+	matrix_sparse_ra_t(int n);
+
+	/** Установить значение в позиции (i, j) */
+	double& operator()(int i, int j);
+
+	/** Получить значение в позиции (i, j). Если туда ещё не устанавливалось значение, вызывается исключение. */
+	const double& operator()(int i, int j) const;
+
+	/** Преобразует текущую матрицу к разреженной матрице. */
+	matrix_sparse_t to_sparse(void) const;
+private:
+	int n;
+	vector<double> dm;
+	vector<map<int, double>> lm, um;
+};
+\end{minted}
+
 \section{Исследования}
 
+Во всех исследованиях заданы следующие параметры $ \lambda = \gamma = \sigma = \chi = 1$.
+
+СЛАУ решается при помощи Локально-Оптимальной Схемы (ЛОС) с неполным LU предобуславливанием.
+
 \subsection{Таблицы}
+
+Далее в таблицах будут указаны две функции: $\operatorname{space}(x, y)$ и $\operatorname{time}(t)$, итоговая функция $u$ будет формироваться из них: $u(x, y, t) = \operatorname{space}(x, y) + \operatorname{time}(t) $.
+
+В таблицах для каждой функции указано три значения: 
+
+\begin{easylist}
+\ListProperties(Hang1=true, Margin2=12pt, Style1**=$\bullet$ , Hide1=1)
+& Интеграл разности между истинной функцией и конечно-элементоной аппроксимацией.
+& Норма разности векторов $q$ для найденного решения и $q$, полученного из истинного значения функции.
+& Время решения в миллисекундах.
+\end{easylist}
+
+
 
 \newcommand{\mytable}[1]{
 \begin{center}
 \noindent\pgfplotstabletypeset[
-	columns={a,$t$,$t^2$,$t^3$,$t^4$,$e^t$},
+	columns={a,$0$,$t$,$t^2$,$t^3$,$t^4$,$e^t$},
 	columns/a/.style={string type, column name={\backslashbox{$\operatorname{space}(x, y)$}{$\operatorname{time}(t)$}}},
+	columns/$0$/.style={string type},
 	columns/$t$/.style={string type},
 	columns/$t^2$/.style={string type},
 	columns/$t^3$/.style={string type},
@@ -127,52 +355,167 @@ $$ \roubr{\frac{\mb{G}}{2} + \mb{C}\roubr{\frac{\gamma}{2} + \frac{\sigma}{d_1} 
 
 \subsubsection{10 на 10 на 10}
 
-% \mytable{functions_table_10_10_10}
+Сетка по пространству: $ (x, y) \in [0, 1] \times [0, 1] $, строк и столбцов $10$. Сетка по времени: $ t \in [0, 1] $, количество элементов сетки 10. Все сетки равномерные.
+
+\mytable{functions_table_10_10_10}
+
+\conclusion полностью (на всей области конечных элементов, а не только в узлах) аппроксимируются только линейные функции по пространству и для степени $t$ равной 0, 1 или 2.
+
+\conclusion значения в узлах полностью аппроксимируются только до полиномов 3 степени включительно по пространству.
+
+\conclusion порядок аппроксимации по пространству --- $3$, порядок аппроксимации по времени --- $2$.
+
+\conclusion все функции считаются примерно за одинаковое время.
 
 \subsubsection{50 на 50 на 50}
 
-% \mytable{functions_table_50_50_50}
+Сетки аналогичны предыдущему пункту, только число элементов по всем сеткам равно 50.
+
+\mytable{functions_table_50_50_50}
+
+\conclusion предыдущие выводы не опровеглись.
+
+\conclusion время вычислений выросло примерно в 110 раз.
 
 \subsection{Неравномерные сетки}
 
+\subsubsection{Функции нелинейной сетки}
+
+В ходе выполнения лабораторной работы была обнаружена функция, позволяющая легко задавать неравномерную сетку, сгущающуюся к одному из концов.
+
+Если у нас задано начало --- $a$ и конец сетки --- $b$, а количество элементов $n$, тогда сетку можно задать следующим образом:
+
+$$ x_i = a + m\left(\frac{i}{n}\right) \cdot (b-a), i=\overline{0, n} $$
+
+где $m(x)$ --- некоторая функция, задающая неравномерную сетку. При этом $x$ обязан принадлежать области $[0, 1]$, а функция $m$ возвращать значения из той же области, и при этом быть монотонной на этом участке. Тогда гарантируется условие монотонности сетки, то есть что при $j \leqslant i\, \Rightarrow\, x_j \leqslant x_i$. 
+
+\textit{Пример:} при $m(x) = x$, сетка становится равномерной.
+
+Найденная функция зависят от параметра неравномерности t:
+
+$$ m_t(x) = \frac{1-\roubr{1-|t|}^{x\operatorname{sign} t}}{1-\roubr{1-|t|}^{\operatorname{sign} t}} $$
+
+Эта функции вырождается в $x$ при $t=0$; при $t=-1$, она вырождается в сетку, полностью находящуюся в $0$; а при $t=1$ она полностью сгущается к $1$. 
+
+Таким образом, можно исследовать различные неравномерные сетки, изменяя параметр от $-1$ до $1$, где точка $t=0$ будет являться результатом на равномерной сетке.
+
 \subsubsection{По пространству}
+
+Сетка по пространству: $ (x, y) \in [0, 1] \times [0, 1] $, строк и столбцов $10$. Сетка по времени: $ t \in [0, 1] $, количество элементов сетки 10.
 
 \newcommand{\includetwoimages}[1]{
 \noindent\includegraphics[width=.49\textwidth]{#1_norm.png}\includegraphics[width=.49\textwidth]{#1_integral.png}
 }
 
-% \includetwoimages{space_tgrid_0}
+\myparagraph{Функция 1}
+$$ u = x^2 + y^2 + t^2 $$
 
-% \includetwoimages{space_tgrid_1}
+\includetwoimages{space_tgrid_0}
 
-% \includetwoimages{space_tgrid_2}
+\conclusion так как эта функция полностью аппроксимируется данным методом в узлах, то не имеет значения насколько сетка неравномерна, примерно во всех элементах она имеет одинаковую невязку, согласно левому графику. Разве что в сильно неравномерных сетках, где элементы сильно сгущены к одному из концов, точностью страдает на несколько порядков.
+
+\conclusion а по интегральной норме лучшей сеткой является раномерная сетка согласно правому графику.
+
+\myparagraph{Функция 2}
+$$ u = x^4 + y^3x + t^4 $$
+
+\includetwoimages{space_tgrid_1}
+
+\conclusion согласно левому графику норма в узлах лучше всего аппроксимируется при сгущении по $y$ в одну или другую сторону. По $x$ же неравномерность сетки практически ни на что не влияет.
+
+\conclusion лучшая точность, даваемая неравномерной сетки примерно на полпорядка лучше, чем при равномерной.
+
+\conclusion по интегральной же норме существует некоторая комбинация параметров, при которых сетка получается оптимальной. Но различия от неравномерной сетки ничтожны.
+
+\myparagraph{Функция 3}
+$$ u = e^{xy} + e^{t^2} $$
+
+\includetwoimages{space_tgrid_2}
+
+\conclusion согласно левому графику аппроксимация в узлах тоже имеет некоторые оптимальлные значения, причем точность увеличивается на порядок.
+
+\conclusion для интегральной же нормы различия же от равномерной сетки ничтожны при любых параметрах сетки.
+
+\myparagraph{Функция 4}
+$$ u = e^{(1-x)(1-y)} + e^{(1-t)^2} $$
+
+\includetwoimages{space_tgrid_3}
+
+\conclusion эта функция отличается от предыдущей, что для неё инвертировано положение $x$ и $y$, график по интегральной норме соответственно изменился.
+
+\myparagraph{Функция 5}
+$$ u = x^3 + y^4 x^2 t + t^2 e^t $$
+
+\includetwoimages{space_tgrid_4}
+
+\conclusion всё аналогично предыдущим выводам и функциям.
+
+\myparagraph{Общие выводы}
+
+\conclusion хорошая аппроксимация в узлах $\neq$ хорошая аппроксимация по интегральной норме.
+
+\conclusion согласно интегральной норме для неполиномиальных функций существует некоторый набор параметров $t_x$ и $t_y$, при которых нелинейная сетка оптимальным образом аппроксимирует функцию.
+
+\conclusion согласно норме в узлах для неполиномиальных функций оптимальными являются параметры в окрестности $\pm 1$.
 
 \subsubsection{По времени}
 
+Сетка по пространству: $ (x, y) \in [0, 1] \times [0, 1] $, строк и столбцов $10$. Сетка по времени: $ t \in [0, 1] $, количество элементов сетки 10.
+
 \newcommand{\includetwographs}[1]{
 \noindent\begin{tikzpicture}
-\begin{semilogyaxis}[xlabel=t,ylabel=Интегральная разность,width=\textwidth, height=6cm]
-\addplot[red, no markers] table [y=integral, x=t]{#1.txt};
+\begin{semilogyaxis}[xlabel=t,ylabel=Интегральная разность,width=0.49\textwidth, height=6cm]
+\addplot[black, dashed, no markers] table [y=integral, x=t]{#1.txt};
 \addplot[black, no markers] table [y=uniform_integral, x=t]{#1.txt};
 \legend{Неравномерная сетка,Равномерная сетка}
 \end{semilogyaxis}
 \end{tikzpicture}
-
-\noindent\begin{tikzpicture}
-\begin{semilogyaxis}[xlabel=t,ylabel=Норма разности векторов,width=\textwidth, height=6cm]
-\addplot[red, no markers] table [y=norm, x=t]{#1.txt};
+\begin{tikzpicture}
+\begin{semilogyaxis}[xlabel=t,ylabel=Норма разности векторов,width=0.49\textwidth, height=6cm]
+\addplot[black, dashed, no markers] table [y=norm, x=t]{#1.txt};
 \addplot[black, no markers] table [y=uniform_norm, x=t]{#1.txt};
 \legend{Неравномерная сетка,Равномерная сетка}
 \end{semilogyaxis}
 \end{tikzpicture}
 }
 
+\myparagraph{Функция 1}
+$$ u = x^2 + y^2 + t^2 $$
+
 \includetwographs{time_tgrid_0}
+
+\conclusion так как по времени эта функция аппроксимируется точно, то неравномерность сетки никак не влияет на точность. Правый график колеблется в пределах максимальной точности, левый же абсолютно не меняется.
+
+\myparagraph{Функция 2}
+$$ u = x^4 + y^3x + t^4 $$
 
 \includetwographs{time_tgrid_1}
 
+\conclusion для данной функции в сетки есть выраженный минимум в окрестности $t=0.7$, но улучшение точности на нем примерно полпорядка.
+
+\myparagraph{Функция 3}
+$$ u = e^{xy} + e^{t^2} $$
+
 \includetwographs{time_tgrid_2}
+
+\conclusion всё аналогично предыдущему.
+
+\myparagraph{Функция 4}
+$$ u = e^{(1-x)(1-y)} + e^{(1-t)^2} $$
 
 \includetwographs{time_tgrid_3}
 
+\conclusion эта функция является перевернутой версией предыдущей, но график аналогчно не переверлся, а наблюдается более сложная зависимость. Для данной функции неравномерная сетка по времени практичеки везде дает отрицательный эффект по сравнению с равномерной сеткой.
+
+\myparagraph{Функция 5}
+$$ u = x^3 + y^4 x^2 t + t^2 e^t $$
+
 \includetwographs{time_tgrid_4}
+
+\myparagraph{Общие выводы}
+
+\conclusion у множества функций наблюдалось схожее поведение на неравномерной сетке по времени, с наличием ярко выраженного минимума, и использование сетки с данным оптимальным параметром может улучшить точность решения на полпорядка.
+
+\section{Код}
+
+\mycodeinput{c++}{../main.cpp}{main.cpp}

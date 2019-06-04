@@ -192,6 +192,7 @@ void investigate_functions(
 ) {
 	vector<pair<function_3d_t, string>> spaces, times;
 
+	spaces.push_back({[] (double x, double y, double t) -> double { return 1; }, "$1$"});
 	spaces.push_back({[] (double x, double y, double t) -> double { return x+y; }, "$x+y$"});
 	spaces.push_back({[] (double x, double y, double t) -> double { return x*x+y*y; }, "$x^2+y$"});
 	spaces.push_back({[] (double x, double y, double t) -> double { return x*x*y+y*y*y; }, "$x^2y+y^3$"});
@@ -199,6 +200,7 @@ void investigate_functions(
 	spaces.push_back({[] (double x, double y, double t) -> double { return x*x*x*x+y*y*y*y; }, "$x^4+y^4$"});
 	spaces.push_back({[] (double x, double y, double t) -> double { return exp(x*y); }, "$e^{xy}$"});
 
+	times.push_back({[] (double x, double y, double t) -> double { return 0; }, "$0$"});
 	times.push_back({[] (double x, double y, double t) -> double { return t; }, "$t$"});
 	times.push_back({[] (double x, double y, double t) -> double { return t*t; }, "$t^2$"});
 	times.push_back({[] (double x, double y, double t) -> double { return t*t*t; }, "$t^3$"});
@@ -233,7 +235,7 @@ void investigate_functions(
 
 int main() {
 	cout << calc_time_microseconds([](){
-		/*investigate_functions(
+		investigate_functions(
 			"functions_table_10_10_10.txt",
 			[] (const function_3d_t& u) -> fem_result_t {
 				return calc_fem_residual(u, grid_generator_t(0, 1, 10), grid_generator_t(0, 1, 10), grid_generator_t(0, 1, 10));
@@ -245,7 +247,7 @@ int main() {
 			[](const function_3d_t& u) ->  fem_result_t {
 				return calc_fem_residual(u, grid_generator_t(0, 1, 50), grid_generator_t(0, 1, 50), grid_generator_t(0, 1, 50));
 			}
-		);*/
+		);
 
 		vector<pair<function_3d_t, int>> u_space_mas;
 		u_space_mas.push_back({[] (double x, double y, double t) -> double { return x*x + y*y + t*t; }, 0});
@@ -264,13 +266,13 @@ int main() {
 				}
 			);
 
-			/*investigate_t2_changing(
+			investigate_t2_changing(
 				75,
 				"space_tgrid_" + to_string(i.second),
 				[u] (double tx, double ty) -> fem_result_t {
 					return calc_fem_residual(u, grid_generator_t(0, 1, 10, tx), grid_generator_t(0, 1, 10, ty), grid_generator_t(0, 1, 10));
 				}
-			);*/
+			);
 		}
 	})/1000/1000 << "s" << endl;
 	system("pause");

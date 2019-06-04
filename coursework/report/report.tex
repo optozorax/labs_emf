@@ -1,8 +1,7 @@
 \documentclass[a4paper,12pt]{article}
-\usepackage[english,russian]{babel}
 
-% xelatex
 \usepackage{fontspec}
+
 \setmainfont[
   Ligatures=TeX,
   Extension=.otf,
@@ -10,9 +9,13 @@
   ItalicFont=cmunti,
   BoldItalicFont=cmunbi,
 ]{cmunrm}
+\setmonofont{Consolas}
+
 \usepackage{polyglossia}
-\setdefaultlanguage{russian}
-\setotherlanguage{english}
+\setdefaultlanguage{english}
+\setotherlanguage{russian}
+
+\newcommand{\RU}[1]{\foreignlanguage{russian}{#1}}
 
 \usepackage{indentfirst}
 \frenchspacing
@@ -35,7 +38,7 @@
 
 % Для вставки графики
 \usepackage{graphicx}
-\usepackage{hyperref}
+%\usepackage{hyperref}
 
 % Для таблиц
 \usepackage{longtable}
@@ -85,21 +88,23 @@
 \tcbuselibrary{minted}
 \usemintedstyle{vs}
 
+\usepackage{array}
+
 % Для подсветки кода
 \usepackage{minted}
 
 % Задаем цвет номеров строк подсветки кода
-\renewcommand{\theFancyVerbLine}{\sffamily\textcolor[rgb]{1, 1, 1}{\fontsize{4}{4}\selectfont\arabic{FancyVerbLine}}}
+\renewcommand{\theFancyVerbLine}{\sffamily\textcolor[rgb]{1, 1, 1}{\fontsize{5}{5}\selectfont\arabic{FancyVerbLine}}}
 
 % Определяем новую команду для красивой вставки кода в рамочке и с прочими прелестями
 \newcommand{\mycodeinput}[3]{
 \begin{tcolorbox}[
-	colback=black!5!white,
+	colback=white,
 	colframe=black!30!white,
 	boxrule=0.5pt, 
 	listing only,
 	left=-0.5mm,
-	leftrule=3.3mm,
+	leftrule=4mm,
 	arc=2mm, outer arc=2mm,
 	top=0pt,
 	bottom=0pt,
@@ -195,6 +200,6 @@ boxsep=0pt,left=2pt,right=2pt,top=2pt,bottom=0pt}
 
 \begin{document}
 
-\input{file}
+\RU{\input{file}}
 
 \end{document}

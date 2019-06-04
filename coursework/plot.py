@@ -44,3 +44,5 @@ if __name__ == '__main__':
 	make_images(0)
 	make_images(1)
 	make_images(2)
+	make_images(3)
+	make_images(4)
