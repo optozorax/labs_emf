@@ -1,8 +1,7 @@
-\newcommand{\ltcell}[1]{\begin{tabular}{@{}l@{}}#1\end{tabular}}
-
-% Собственные обозначения для дополнительной нумерации глав
-\setcounter{secnumdepth}{4} % Чтобы параграф отображался цифрами
-\newcommand{\myparagraph}[1]{\paragraph{#1}\mbox{}\\} % Аналог \subsubsubsection
+\pgfplotstableset{
+	begin table={\rowcolors{2}{gray!25}{white}\begin{tabular}},
+	end table=\end{tabular},
+}
 
 % Собственные обозначения для скобок
 \newcommand{\roubr}[1]{\left(#1\right)}  % round  brackets ()
@@ -20,6 +19,8 @@
 \newcommand{\mypartial}[2]{\frac{\partial #1}{\partial #2}}
 \newcommand{\mypartialpow}[3]{\frac{\partial^{#3} #1}{\partial #2^{#3}}}
 \newcommand{\myintegral}[2]{\int\limits_{#1}^{#2}}
+
+\section{Теория}
 
 Решаемое уравнение в общем виде в декартовой системе координат:
 
@@ -50,7 +51,7 @@ $$ \mb{G} = \frac{\bar{\lambda}}{6}\frac{h_y}{h_x}\begin{pmatrix}
 2 & 1 & -2 & -1 \\
 1 & 2 & -1 & -2 \\
 -2 & -1 & 2 & 1 \\
--1 & 2 & 1 & 2
+-1 & -2 & 1 & 2
 \end{pmatrix} $$
 
 $$ \mb{C} = \frac{h_x h_y}{36}\begin{pmatrix}
@@ -65,9 +66,6 @@ $$ \mb{M}^\gamma = \bar{\gamma}\mb{C} $$
 $$ \mb{f} = \roubr{f_1, f_2, f_3, f_4}^t $$
 
 $$ \mb{b} = \mb{C}\cdot \mb{f} $$
-
-
-
 
 Схема Кранка-Николсона:
 
@@ -99,11 +97,82 @@ $$ \mypartialpow{u}{t}{2} = 2\frac{u^j-u^{j-1}\frac{t_0-t_2}{t_1-t_2}+u^{j-2}\fr
 
 Эти выражения были упрощены при помощи замен:
 
-$$ d_1 = t_2-t_1, \quad d_2 = \frac{t_0\roubr{t_0-t_1-t_2} + t_1 t_2}{2}, \quad m_1 = \frac{t_0-t_2}{t_1-t_2}, \quad m_2 = \frac{t_0-t_1}{t_1-t_2} $$ 
+$$ d_1 = t_0-t_2, \quad d_2 = \frac{t_0\roubr{t_0-t_1-t_2} + t_1 t_2}{2}, \quad m_1 = \frac{t_0-t_2}{t_1-t_2}, \quad m_2 = \frac{t_0-t_1}{t_1-t_2} $$ 
 
 И итоговый результат будет:
 
 $$ \roubr{\frac{\mb{G}}{2} + \mb{C}\roubr{\frac{\gamma}{2} + \frac{\sigma}{d_1} + \frac{\chi}{d_2}}}\mb{q}^j = \frac{\roubr{\mb{b}^j+\mb{b}^{j-2}}}{2} - \frac{\mb{G}\mb{q}^{j-2}}{2} + \mb{C}\roubr{\mb{q}^{j-1}\frac{m_1\chi}{d_2} + \mb{q}^{j-2}\roubr{-\frac{\gamma}{2}+\frac{\sigma}{d_1}-\frac{m_2\chi}{d_2}}} $$
 
-% a = 0.5 * m + (cs.chi/dt/dt + cs.sigma/2.0/dt) * c + 0.5 * g;
-% b = 0.5 * (b0 + bll) - m * (cs.chi/dt/dt * (-2.0*ql + qll) - cs.sigma/2.0/dt * qll) - 0.5*g * qll - 0.5*m * qll;
+\section{Исследования}
+
+\subsection{Таблицы}
+
+\newcommand{\mytable}[1]{
+\begin{center}
+\noindent\pgfplotstabletypeset[
+	columns={a,$t$,$t^2$,$t^3$,$t^4$,$e^t$},
+	columns/a/.style={string type, column name={\backslashbox{$\operatorname{space}(x, y)$}{$\operatorname{time}(t)$}}},
+	columns/$t$/.style={string type},
+	columns/$t^2$/.style={string type},
+	columns/$t^3$/.style={string type},
+	columns/$t^4$/.style={string type},
+	columns/$e^t$/.style={string type, column type/.add={}{|},},
+	every head row/.style={before row=\hline,after row=\hline\hline}, 
+	every last row/.style={after row=\hline},
+	column type/.add={|}{},
+	col sep=tab,
+]{#1.txt}
+\end{center}
+}
+
+\subsubsection{10 на 10 на 10}
+
+% \mytable{functions_table_10_10_10}
+
+\subsubsection{50 на 50 на 50}
+
+% \mytable{functions_table_50_50_50}
+
+\subsection{Неравномерные сетки}
+
+\subsubsection{По пространству}
+
+\newcommand{\includetwoimages}[1]{
+\noindent\includegraphics[width=.49\textwidth]{#1_norm.png}\includegraphics[width=.49\textwidth]{#1_integral.png}
+}
+
+% \includetwoimages{space_tgrid_0}
+
+% \includetwoimages{space_tgrid_1}
+
+% \includetwoimages{space_tgrid_2}
+
+\subsubsection{По времени}
+
+\newcommand{\includetwographs}[1]{
+\noindent\begin{tikzpicture}
+\begin{semilogyaxis}[xlabel=t,ylabel=Интегральная разность,width=\textwidth, height=6cm]
+\addplot[red, no markers] table [y=integral, x=t]{#1.txt};
+\addplot[black, no markers] table [y=uniform_integral, x=t]{#1.txt};
+\legend{Неравномерная сетка,Равномерная сетка}
+\end{semilogyaxis}
+\end{tikzpicture}
+
+\noindent\begin{tikzpicture}
+\begin{semilogyaxis}[xlabel=t,ylabel=Норма разности векторов,width=\textwidth, height=6cm]
+\addplot[red, no markers] table [y=norm, x=t]{#1.txt};
+\addplot[black, no markers] table [y=uniform_norm, x=t]{#1.txt};
+\legend{Неравномерная сетка,Равномерная сетка}
+\end{semilogyaxis}
+\end{tikzpicture}
+}
+
+\includetwographs{time_tgrid_0}
+
+\includetwographs{time_tgrid_1}
+
+\includetwographs{time_tgrid_2}
+
+\includetwographs{time_tgrid_3}
+
+\includetwographs{time_tgrid_4}

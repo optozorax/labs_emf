@@ -68,8 +68,13 @@ double grid_generator_t::operator()(int i) const {
 }
 
 //-----------------------------------------------------------------------------
-int grid_generator_t::size() const {
+int grid_generator_t::size(void) const {
 	return n1+1;
+}
+
+//-----------------------------------------------------------------------------
+double grid_generator_t::back(void) const {
+	return operator()(size()-1);
 }
 
 //-----------------------------------------------------------------------------

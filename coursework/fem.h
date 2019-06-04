@@ -61,7 +61,8 @@ class grid_generator_t
 public:
 	grid_generator_t(double a, double b, int n, double t = 0);
 	double operator()(int i) const;
-	int size() const;
+	int size(void) const;
+	double back(void) const;
 private:
 	double a, len, t, n1;
 };

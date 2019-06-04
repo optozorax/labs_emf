@@ -6,6 +6,7 @@
 #include <mutex>
 #include <iomanip>
 #include <iostream>
+#include <string>
 #include <Eigen/Dense>
 
 using namespace std;
@@ -34,4 +35,27 @@ inline void write_percent(double percent) {
 	static mutex m;
 	lock_guard<mutex> g(m);
 	cout << "\r" << setprecision(2) << fixed << setw(5) << percent * 100 << "%";
+}
+
+//-----------------------------------------------------------------------------
+inline string write_for_latex_double(double v, int precision) {
+	int power = log(std::fabs(v)) / log(10.0);
+	double value = v / pow(10.0, power);
+
+	if (v != v) return "nan";
+
+	if (v == 0) {
+		power = 0;
+		value = 0;
+	}
+
+	stringstream sout;
+	sout.precision(precision);
+	if (power == -1 || power == 0 || power == 1) {
+		sout << v;
+	} else {
+		sout << value << "\\cdot 10^{" << power << "}";
+	}
+
+	return sout.str();
 }
