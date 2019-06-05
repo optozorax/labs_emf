@@ -23,6 +23,46 @@
 \newcommand{\mypartialpow}[3]{\frac{\partial^{#3} #1}{\partial #2^{#3}}}
 \newcommand{\myintegral}[2]{\int\limits_{#1}^{#2}}
 
+\begin{center}
+\hfill \break
+\Large{Министерство науки и высшего образования Российской Федерации}\\
+\hfill \break
+\large{Федеральное государственное бюджетное образовательное учреждение высшего образования}\\ 
+\normalsize{\textbf{«НОВОСИБИРСКИЙ ГОСУДАРСТВЕННЫЙ ТЕХНИЧЕСКИЙ УНИВЕРСИТЕТ»}}\\
+\hfill \break
+\includegraphics{nstu_logo.eps} \\
+\hfill \break
+\large{Кафедра прикладной математики}\\
+\hfill \break
+\large{Уравнения математической физики}\\
+\hfill \break
+\hfill \break
+\Large{\textbf{Пояснительная записка к курсовому проекту}}\\
+\hfill \break
+\hfill \break 
+\normalsize{\begin{tabular}{cllp{1.5cm}p{1.5cm}}
+\multirow{5}{*}[0.75cm]{\includegraphics[scale=0.5]{fami_logo.eps}}
+& \textbf{Факультет:} & ПМИ & & \\[1.25ex]
+& \textbf{Группа:} & ПМ-63 & & \\[1.25ex]
+& \textbf{Студент:} & Шепрут И.И. & & \\[1.25ex]
+& \textbf{Преподаватель:} & Персова М.Г. & & \\[1.25ex]
+&  &  & & \\[1.25ex]
+\end{tabular}} \\
+\hfill \break
+\hfill \break
+\hfill \break
+\hfill \break
+\hfill \break
+\large{Новосибирск\\2019}
+\end{center}
+\thispagestyle{empty}
+\newpage 
+\setcounter{page}{1}
+
+\section{Задание}
+
+Реализовать МКЭ для двумерной задачи для гиперболического уравнения в декартовой системе координат. Базисные функции --- билинейные. Схема Кранка-Николсона.
+
 \section{Теория}
 
 Решаемое уравнение в общем виде:
@@ -175,6 +215,21 @@ $$ \roubr{\frac{\mb{G}}{2} + \mb{C}\roubr{\frac{\gamma}{2} + \frac{\sigma}{d_1} 
 
 \noindent\textbf{Для задания сетки используется класс:}
 
+\begin{tcolorbox}[
+	colback=white,
+	colframe=black!30!white,
+	boxrule=0.5pt, 
+	listing only,
+	left=-0.5mm,
+	leftrule=4mm,
+	arc=2mm, outer arc=2mm,
+	top=0pt,
+	bottom=0pt,
+	enhanced jigsaw,
+	coltitle=black, 
+	fonttitle=\bfseries\ttfamily,
+	break at=-\baselineskip/0pt/\textheight, 
+]
 \begin{minted}[
 	breaklines,
 	breakanywhere=true,
@@ -196,9 +251,25 @@ private:
 	double a, len, t, n1;
 };
 \end{minted}
+\end{tcolorbox} 
 
 \noindent\textbf{Для задания узла конечного элемента структура:}
 
+\begin{tcolorbox}[
+	colback=white,
+	colframe=black!30!white,
+	boxrule=0.5pt, 
+	listing only,
+	left=-0.5mm,
+	leftrule=4mm,
+	arc=2mm, outer arc=2mm,
+	top=0pt,
+	bottom=0pt,
+	enhanced jigsaw,
+	coltitle=black, 
+	fonttitle=\bfseries\ttfamily,
+	break at=-\baselineskip/0pt/\textheight, 
+]
 \begin{minted}[
 	breaklines,
 	breakanywhere=true,
@@ -221,9 +292,25 @@ struct basic_elem_t
 	bool is_boundary(void) const;
 };
 \end{minted}
+\end{tcolorbox} 
 
 \noindent\textbf{Для задания конечного элемента используется структура:}
 
+\begin{tcolorbox}[
+	colback=white,
+	colframe=black!30!white,
+	boxrule=0.5pt, 
+	listing only,
+	left=-0.5mm,
+	leftrule=4mm,
+	arc=2mm, outer arc=2mm,
+	top=0pt,
+	bottom=0pt,
+	enhanced jigsaw,
+	coltitle=black, 
+	fonttitle=\bfseries\ttfamily,
+	break at=-\baselineskip/0pt/\textheight, 
+]
 \begin{minted}[
 	breaklines,
 	breakanywhere=true,
@@ -254,9 +341,25 @@ struct elem_t
 	double value(double x, double y, const vector_t& q) const;
 };
 \end{minted}
+\end{tcolorbox} 
 
 \noindent\textbf{Прямоугольная сетка задается и вычисляется с помощью класса:}
 
+\begin{tcolorbox}[
+	colback=white,
+	colframe=black!30!white,
+	boxrule=0.5pt, 
+	listing only,
+	left=-0.5mm,
+	leftrule=4mm,
+	arc=2mm, outer arc=2mm,
+	top=0pt,
+	bottom=0pt,
+	enhanced jigsaw,
+	coltitle=black, 
+	fonttitle=\bfseries\ttfamily,
+	break at=-\baselineskip/0pt/\textheight, 
+]
 \begin{minted}[
 	breaklines,
 	breakanywhere=true,
@@ -278,11 +381,27 @@ public:
 	void calc(const grid_generator_t& gx, const grid_generator_t& gy);
 };
 \end{minted}
+\end{tcolorbox} 
 
-Локальные матрицы формируются, получая на вход конечный элемент \texttt{elem\_t}.
+\noindent\textbf{Локальные матрицы формируются, получая на вход конечный элемент \texttt{elem\_t}.}
 
-Для генерации разреженной матрицы используется класс с возможностью произвольного доступа к элементам:
+\noindent\textbf{Для генерации разреженной матрицы используется класс с возможностью произвольного доступа к элементам:}
 
+\begin{tcolorbox}[
+	colback=white,
+	colframe=black!30!white,
+	boxrule=0.5pt, 
+	listing only,
+	left=-0.5mm,
+	leftrule=4mm,
+	arc=2mm, outer arc=2mm,
+	top=0pt,
+	bottom=0pt,
+	enhanced jigsaw,
+	coltitle=black, 
+	fonttitle=\bfseries\ttfamily,
+	break at=-\baselineskip/0pt/\textheight, 
+]
 \begin{minted}[
 	breaklines,
 	breakanywhere=true,
@@ -312,6 +431,8 @@ private:
 	vector<map<int, double>> lm, um;
 };
 \end{minted}
+\end{tcolorbox} 
+
 
 \section{Исследования}
 
@@ -516,6 +637,94 @@ $$ u = x^3 + y^4 x^2 t + t^2 e^t $$
 
 \conclusion у множества функций наблюдалось схожее поведение на неравномерной сетке по времени, с наличием ярко выраженного минимума, и использование сетки с данным оптимальным параметром может улучшить точность решения на полпорядка.
 
+\subsection{Порядок сходимости}
+
+Исследуется на функции:
+$$ u(x, y, t) = e^{xy} + e^{t^2} $$
+
+\subsubsection{Увеличение размерности по пространству}
+
+Сетка по пространству: $ (x, y) \in [0, 1] \times [0, 1] $. Сетка по времени: $ t \in [0, 1] $, количество элементов сетки 200.
+
+\noindent\begin{tikzpicture}
+\begin{semilogyaxis}[xlabel=Число узлов,ylabel=Интегральная разность,width=\textwidth, height=6cm]
+\addplot[black, no markers] table [y=integral, x=i]{space_sgrid.txt};
+\addplot[black, dashed, smooth, domain=49:5776] {529^(0.75)*x^(-0.75)*0.000190175};
+\legend{Точность решения,$c\cdot x^{-0.75}$,}
+\end{semilogyaxis}
+\end{tikzpicture}
+
+\conclusion согласно интегральной норме, порядок сходимости $\approx 0.75$.
+
+\noindent\begin{tikzpicture}
+\begin{semilogyaxis}[xlabel=Число узлов,ylabel=Норма разности векторов,width=\textwidth, height=6cm]
+\addplot[black, no markers] table [y=norm, x=i]{space_sgrid.txt};
+\addplot[black, dashed, smooth, domain=49:5776] {529^(0.45)*x^(-0.45)*8.59283*10^(-7)};
+\legend{Точность решения,$c\cdot x^{-0.45}$,}
+\end{semilogyaxis}
+\end{tikzpicture}
+
+\conclusion согласно норме разности векторов, порядок сходимости $\approx 0.45$.
+
+\noindent\begin{tikzpicture}
+\begin{axis}[xlabel=Число узлов,ylabel=Время решения мкс,width=\textwidth, height=6cm]
+\addplot[black, no markers] table [y=time, x=i]{space_sgrid.txt};
+\addplot[black, dashed, smooth, domain=49:5776] {x/5776*4.89955*10^7};
+\end{axis}
+\end{tikzpicture}
+
+\conclusion время решения почти линейно зависит от числа узлов (с учетом погрешности, вносимой многопоточностью).
+
+\subsubsection{Увеличение размерности по времени}
+
+Сетка по пространству: $ (x, y) \in [0, 1] \times [0, 1] $, строк и столбцов $20$. Сетка по времени: $ t \in [0, 1] $.
+
+\noindent\begin{tikzpicture}
+\begin{semilogyaxis}[xlabel=Число временных итераций,ylabel=Интегральная разность,width=\textwidth, height=6cm]
+\addplot[black, no markers] table [y=integral, x=i]{time_sgrid.txt};
+%\addplot[black, dashed, smooth, domain=49:5776] {529^(0.75)*x^(-0.75)*0.000190175};
+\legend{Точность решения,$c\cdot x^{-0.75}$,}
+\end{semilogyaxis}
+\end{tikzpicture}
+
+\conclusion при увеличении числа итераций по времени, увеличивается интегральная норма, но потом она достигает предельного значения и далее не увеличивается, потому что количество элементов сетки неизменно, и они не способны точно аппроксимировать данную функцию, поскольку она непредставима в линейных элементах.
+
+\noindent\begin{tikzpicture}
+\begin{semilogyaxis}[xlabel=Число временных итераций,ylabel=Норма разности векторов,width=\textwidth, height=6cm]
+\addplot[black, no markers] table [y=norm, x=i]{time_sgrid.txt};
+\addplot[black, dashed, smooth, domain=3:501] {100^(2)*x^(-2)*9.10204*10^(-6)};
+\legend{Точность решения,$c\cdot x^{-2}$,}
+\end{semilogyaxis}
+\end{tikzpicture}
+
+\conclusion при увеличении числа итераций по времени, увеличивается точность, и порядок аппроксимации по времени равен 2.
+
+\noindent\begin{tikzpicture}
+\begin{axis}[xlabel=Число временных итераций,ylabel=Время решения мкс,width=\textwidth, height=6cm]
+\addplot[black, no markers] table [y=time, x=i]{time_sgrid.txt};
+\addplot[black, dashed, smooth, domain=3:501] {x/501*4.7259*10^6};
+\end{axis}
+\end{tikzpicture}
+
+\conclusion время решения почти линейно зависит от числа итераций по времени (с учетом погрешности, вносимой многопоточностью).
+
 \section{Код}
 
+\subsection{Файлы заголовков}
+
+\mycodeinput{c++}{../lib.h}{lib.h}
+\mycodeinput{c++}{../sparse.h}{sparse.h}
+\mycodeinput{c++}{../fem.h}{fem.h}
+
+\subsection{Исходные файлы}
+
+\mycodeinput{c++}{../sparse.cpp}{sparse.cpp}
+\mycodeinput{c++}{../fem.cpp}{fem.cpp}
+
+\subsection{Исследования}
+
 \mycodeinput{c++}{../main.cpp}{main.cpp}
+
+\subsection{Визуализация}
+
+\mycodeinput{python}{../plot.py}{plot.py}

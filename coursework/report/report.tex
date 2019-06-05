@@ -159,45 +159,6 @@ before upper={\rule[-3pt]{0pt}{10pt}},boxrule=0.5pt,
 boxsep=0pt,left=2pt,right=2pt,top=2pt,bottom=0pt}
 \newcommand{\mycodeinline}[2]{\inlinecodetable{\mintinline{#1}{#2}}}
 
-% Определяем новую команду для создания титульного листа
-\newcommand{\mytitlepage}[9]{
-\begin{center}
-\hfill \break
-\Large{Министерство образования и науки Российской Федерации}\\
-\hfill \break
-\large{Федеральное государственное бюджетное образовательное учреждение высшего образования}\\ 
-\normalsize{\textbf{«НОВОСИБИРСКИЙ ГОСУДАРСТВЕННЫЙ ТЕХНИЧЕСКИЙ УНИВЕРСИТЕТ»}}\\
-\hfill \break
-\includegraphics{nstu_logo.eps} \\
-\hfill \break
-\large{Кафедра #1}\\
-\hfill \break
-\large{Лабораторная работа №#2\\по дисциплине <<#3>>}\\
-\hfill \break
-\hfill \break
-\Large{\textbf{#4}}\\
-\hfill \break
-\hfill \break 
-\normalsize{\begin{tabular}{cllp{1.5cm}p{1.5cm}}
-\multirow{5}{*}[0.75cm]{\includegraphics[scale=0.5]{fami_logo.eps}}
-& \textbf{Факультет:} & ПМИ & & \\[1.25ex]
-& \textbf{Группа:} & #5 & & \\[1.25ex]
-& \textbf{Студент:} & #6 & & \\[1.25ex]
-& \textbf{Вариант:} & #7 & & \\[1.25ex]
-& \textbf{Преподаватель:} & #8 & & \\[1.25ex]
-\end{tabular}} \\
-\hfill \break
-\hfill \break
-\hfill \break
-\hfill \break
-\hfill \break
-\large{Новосибирск\\#9}
-\end{center}
-\thispagestyle{empty}
-\newpage 
-\setcounter{page}{1}
-}
-
 \begin{document}
 
 \RU{\input{file}}

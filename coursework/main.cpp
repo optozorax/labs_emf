@@ -41,7 +41,7 @@ fem_result_t calc_fem_residual(
 		auto steps = solve_differential_equation(f, set_boundary_conditions, q0, q1, c, grid, time_grid);
 
 		res.integral_residual = calc_integral_norm(bind(u, _1, _2, time_grid.back()), grid.es, steps.back());
-		res.norm_residual = (q-steps.back()).norm();
+		res.norm_residual = (q-steps.back()).norm() / q.size();
 	});
 	return res;
 }
@@ -233,8 +233,73 @@ void investigate_functions(
 	fout.close();
 }
 
+//-----------------------------------------------------------------------------
+void investigate_grid_changing(
+	const string& filename,
+	const function<pair<fem_result_t, int>(int)>& fi,
+	int n
+) {
+	async_performer_t<pair<fem_result_t, int>, int> performer;
+
+	for (int i = 0; i < n; i+=3) {
+		performer.add([i, fi] () -> pair<fem_result_t, int> {
+			return fi(i);
+		}, i);
+	}
+
+	performer.finish();
+
+	ofstream fout(filename + ".txt");
+	fout << "i\tintegral\tnorm\ttime" << endl;
+	for (int i = 0; i < n; i+=3) {
+		auto v = performer[i];
+		fout 
+			<< v.second << "\t"
+			<< v.first.integral_residual << "\t"
+			<< v.first.norm_residual << "\t"
+			<< v.first.time << endl; 
+	}
+	fout.close();
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+
 int main() {
 	cout << calc_time_microseconds([](){
+		investigate_grid_changing(
+			"space_sgrid",
+			[] (int sz) -> pair<fem_result_t, int> {
+				return {
+					calc_fem_residual(
+						[] (double x, double y, double t) -> double { return exp(x*y) + exp(t*t); }, 
+						grid_generator_t(0, 1, 5+sz), 
+						grid_generator_t(0, 1, 5+sz), 
+						grid_generator_t(0, 1, 300)
+					), 
+					(7+sz)*(7+sz)
+				};
+			},
+			70
+		);
+
+		investigate_grid_changing(
+			"time_sgrid",
+			[] (int sz) -> pair<fem_result_t, int> {
+				return {
+					calc_fem_residual(
+						[] (double x, double y, double t) -> double { return exp(x*y) + exp(t*t); }, 
+						grid_generator_t(0, 1, 20), 
+						grid_generator_t(0, 1, 20), 
+						grid_generator_t(0, 1, 1+sz)
+					), 
+					3+sz
+				};
+			},
+			500
+		);
+
 		investigate_functions(
 			"functions_table_10_10_10.txt",
 			[] (const function_3d_t& u) -> fem_result_t {
