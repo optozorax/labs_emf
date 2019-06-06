@@ -56,13 +56,13 @@ class async_performer_t
 {
 public:
 	void add(const function<Ret(void)>& f, const Key& key) {
-		mf[key] = async(f);
+		mf[key] = async(std::launch::deferred, f);
 	}
 
 	void finish(void) {
 		int counter = 0;
-		for (auto i = mf.rbegin(); i != mf.rend(); ++i) {
-			if (counter % (mf.size()/10000 + 1) == 0)
+		for (auto i = mf.begin(); i != mf.end(); ++i) {
+			//if (counter % (mf.size()/10000 + 1) == 0)
 				write_percent(double(counter)/mf.size());
 			auto value = i->second.get();
 			m[i->first] = value;

@@ -702,7 +702,7 @@ $$ u(x, y, t) = e^{xy} + e^{t^2} $$
 \noindent\begin{tikzpicture}
 \begin{axis}[xlabel=Число временных итераций,ylabel=Время решения мкс,width=\textwidth, height=6cm]
 \addplot[black, no markers] table [y=time, x=i]{time_sgrid.txt};
-\addplot[black, dashed, smooth, domain=3:501] {x/501*4.7259*10^6};
+\addplot[black, dashed, smooth, domain=3:501] {x/501*6*10^6};
 \end{axis}
 \end{tikzpicture}
 
