@@ -11,38 +11,48 @@ bool basic_elem_t::is_boundary(void) const {
 
 //-----------------------------------------------------------------------------
 double elem_t::get_hx(void) const { 
-	return e[1]->x - e[0]->x; 
+	return e[2]->x - e[0]->x; 
 }
 
 //-----------------------------------------------------------------------------
 double elem_t::get_hy(void) const { 
-	return e[3]->y - e[0]->y; 
+	return e[6]->y - e[0]->y; 
 }
 
 //-----------------------------------------------------------------------------
 double elem_t::value(double x, double y, const vector_t& q) const {
 	double xp = e[0]->x;
-	double xp1 = e[1]->x;
-	double ys = e[0]->y;
-	double ys1 = e[2]->y;
+	double yp = e[0]->y;
 	double hx = get_hx();
 	double hy = get_hy();
-	auto x1 = [xp1, hx](double x) -> double { return (xp1 - x) / hx; };
-	auto x2 = [xp, hx](double x) -> double { return (x - xp) / hx; };
-	auto y1 = [ys1, hy](double y) -> double { return (ys1 - y) / hy; };
-	auto y2 = [ys, hy](double y) -> double { return (y - ys) / hy; };
+	auto x1 = [&](double x) -> double { return 1.0 + 3.0*xp/hx + 2.0*(x*x)/(hx*hx) - x*(3.0*hx + 4.0*xp)/(hx*hx) + 2.0*(xp*xp)/(hx*hx); };
+	auto x2 = [&](double x) -> double { return -4.0*(x*x)/(hx*hx) + 4.0*x*(hx + 2.0*xp)/(hx*hx) - 4.0*xp*(hx + xp)/(hx*hx); };
+	auto x3 = [&](double x) -> double { return 2.0*(x*x)/(hx*hx) - x*(hx + 4.0*xp)/(hx*hx) + xp*(hx + 2.0*xp)/(hx*hx); };
+	auto y1 = [&](double y) -> double { return 1.0 + 3.0*yp/hy + 2.0*(y*y)/(hy*hy) - y*(3.0*hy + 4.0*yp)/(hy*hy) + 2.0*(yp*yp)/(hy*hy); };
+	auto y2 = [&](double y) -> double { return -4.0*(y*y)/(hy*hy) + 4.0*y*(hy + 2.0*yp)/(hy*hy) - 4.0*yp*(hy + yp)/(hy*hy); };
+	auto y3 = [&](double y) -> double { return 2.0*(y*y)/(hy*hy) - y*(hy + 4.0*yp)/(hy*hy) + yp*(hy + 2.0*yp)/(hy*hy); };
 
 	auto psi1 = [&]() -> double { return x1(x) * y1(y); };
 	auto psi2 = [&]() -> double { return x2(x) * y1(y); };
-	auto psi3 = [&]() -> double { return x1(x) * y2(y); };
-	auto psi4 = [&]() -> double { return x2(x) * y2(y); };
+	auto psi3 = [&]() -> double { return x3(x) * y1(y); };
+	auto psi4 = [&]() -> double { return x1(x) * y2(y); };
+	auto psi5 = [&]() -> double { return x2(x) * y2(y); };
+	auto psi6 = [&]() -> double { return x3(x) * y2(y); };
+	auto psi7 = [&]() -> double { return x1(x) * y3(y); };
+	auto psi8 = [&]() -> double { return x2(x) * y3(y); };
+	auto psi9 = [&]() -> double { return x3(x) * y3(y); };
 
 	double v1 = psi1() * q[e[0]->i];
 	double v2 = psi2() * q[e[1]->i];
 	double v3 = psi3() * q[e[2]->i];
 	double v4 = psi4() * q[e[3]->i];
+	double v5 = psi5() * q[e[4]->i];
+	double v6 = psi6() * q[e[5]->i];
+	double v7 = psi7() * q[e[6]->i];
+	double v8 = psi8() * q[e[7]->i];
+	double v9 = psi9() * q[e[8]->i];
 
-	return v1 + v2 + v3 + v4;
+	return v1 + v2 + v3 + v4 + v5 + v6 + v7 + v8 + v9;
 }
 
 //-----------------------------------------------------------------------------
@@ -60,7 +70,7 @@ double non_linear_offset(double x, double t) {
 }
 
 //-----------------------------------------------------------------------------
-grid_generator_t::grid_generator_t(double a, double b, int n, double t) : a(a), len(b-a), n1(n+1.0), t(t) {}
+grid_generator_t::grid_generator_t(double a, double b, int n, double t) : a(a), len(b-a), n1(2 * n+1.0), t(t) {}
 
 //-----------------------------------------------------------------------------
 double grid_generator_t::operator()(int i) const {
@@ -92,7 +102,8 @@ void grid_t::calc(const grid_generator_t& gx, const grid_generator_t& gy) {
 				nullptr, 
 				down,
 				left,
-				nullptr
+				nullptr,
+			false
 			};
 			if (down != nullptr) down->up = &bes[counter];
 			if (left != nullptr) left->right = &bes[counter];
@@ -100,21 +111,42 @@ void grid_t::calc(const grid_generator_t& gx, const grid_generator_t& gy) {
 		}
 	}
 
+	n = bes.size();
+
 	es.clear();
 	counter = 0;
 	for (auto& i : bes) {
-		if (i.right != nullptr && i.up != nullptr && i.up->right == i.right->up && i.up->right != nullptr) {
+		bool is_has_next_elems = 
+			i.right != nullptr && 
+			i.right->right != nullptr && 
+			i.up != nullptr && 
+			i.up->up != nullptr && 
+			i.up->up->right->right != nullptr;
+		bool is_not_part_of_elem = i.is_part_of_elem != true;
+		if (is_has_next_elems && is_not_part_of_elem) {
 			es.push_back({counter, 
 				i.right->left, 
 				i.right,
-				i.up, 
-				i.up->right
+				i.right->right, 
+				i.up,
+				i.up->right,
+				i.up->right->right,
+				i.up->up,
+				i.up->up->right,
+				i.up->up->right->right,
 			});
+			i.right->left->is_part_of_elem = true;
+			i.right->is_part_of_elem = true;
+			//i.right->right->is_part_of_elem = true;
+			i.up->is_part_of_elem = true;
+			i.up->right->is_part_of_elem = true;
+			i.up->right->right->is_part_of_elem = true;
+			//i.up->up->is_part_of_elem = true;
+			i.up->up->right->is_part_of_elem = true;
+			//i.up->up->right->right->is_part_of_elem = true;
 			counter++;
 		}
 	}
-
-	n = bes.size();
 }
 
 //-----------------------------------------------------------------------------
@@ -130,8 +162,8 @@ double calc_integral_norm(const function_2d_t& u, const vector<elem_t>& es, cons
 	double sum = 0;
 	for (auto& i : es) {
 		sum += calc_integral_gauss3(
-			i.e[0]->x, i.e[1]->x, 5, 
-			i.e[0]->y, i.e[2]->y, 5,
+			i.e[0]->x, i.e[2]->x, 10, 
+			i.e[0]->y, i.e[6]->y, 10,
 			[&](double x, double y) -> double {
 				return fabs(u(x, y) - i.value(x, y, q));
 			}
@@ -152,18 +184,28 @@ matrix_t calc_local_matrix_g(
 	double hx = e.get_hx();
 	double hy = e.get_hy();
 	matrix_t result;
-	matrix_t a(4, 4), b(4, 4);
+	matrix_t a(9, 9), b(9, 9);
 	a <<
-		2, -2, 1, -1,
-		-2, 2, -1, 1,
-		1, -1, 2, -2,
-		-1, 1, -2, 2;
+		28, -32, 4, 14, -16, 2, -7, 8, -1,
+		-32, 64, -32, -16, 32, -16, 8, -16, 8,
+		4, -32, 28, 2, -16, 14, -1, 8, -7,
+		14, -16, 2, 112, -128, 16, 14, -16, 2,
+		-16, 32, -16, -128, 256, -128, -16, 32, -16,
+		2, -16, 14, 16, -128, 112, 2, -16, 14,
+		-7, 8, -1, 14, -16, 2, 28, -32, 4,
+		8, -16, 8, -16, 32, -16, -32, 64, -32,
+		-1, 8, -7, 2, -16, 14, 4, -32, 28;
 	b <<
-		2, 1, -2, -1,
-		1, 2, -1, -2,
-		-2, -1, 2, 1,
-		-1, -2, 1, 2;
-	result = cs.lambda/6.0*(hy/hx*a + hx/hy*b);
+		28, 14, -7, -32, -16, 8, 4, 2, -1,
+		14, 112, 14, -16, -128, -16, 2, 16, 2,
+		-7, 14, 28, 8, -16, -32, -1, 2, 4,
+		-32, -16, 8, 64, 32, -16, -32, -16, 8,
+		-16, -128, -16, 32, 256, 32, -16, -128, -16,
+		8, -16, -32, -16, 32, 64, 8, -16, -32,
+		4, 2, -1, -32, -16, 8, 28, 14, -7,
+		2, 16, 2, -16, -128, -16, 14, 112, 14,
+		-1, 2, 4, 8, -16, -32, -7, 14, 28;
+	result = cs.lambda/90.0*(hy/hx*a + hx/hy*b);
 	return result;
 }
 
@@ -174,13 +216,18 @@ matrix_t calc_local_matrix_c(
 	double hx = e.get_hx();
 	double hy = e.get_hy();
 	matrix_t result;
-	matrix_t c(4, 4);
+	matrix_t c(9, 9);
 	c <<
-		4, 2, 2, 1,
-		2, 4, 1, 2,
-		2, 1, 4, 2,
-		1, 2, 2, 4;
-	result = hx*hy/36.0*c;
+		16, 8, -4, 8, 4, -2, -4, -2, 1,
+		8, 64, 8, 4, 32, 4, -2, -16, -2,
+		-4, 8, 16, -2, 4, 8, 1, -2, -4,
+		8, 4, -2, 64, 32, -16, 8, 4, -2,
+		4, 32, 4, 32, 256, 32, 4, 32, 4,
+		-2, 4, 8, -16, 32, 64, -2, 4, 8,
+		-4, -2, 1, 8, 4, -2, 16, 8, -4,
+		-2, -16, -2, 4, 32, 4, 8, 64, 8,
+		1, -2, -4, -2, 4, 8, -4, 8, 16;
+	result = hx*hy/900.0*c;
 	return result;
 }
 
@@ -189,12 +236,19 @@ vector_t calc_local_vector_b(
 	const elem_t& e,
 	const function_2d_t& f
 ) {
-	vector_t fv(4);
+	vector_t fv(9);
 	fv << 
 		f(e.e[0]->x, e.e[0]->y),
 		f(e.e[1]->x, e.e[1]->y),
 		f(e.e[2]->x, e.e[2]->y),
-		f(e.e[3]->x, e.e[3]->y);
+
+		f(e.e[3]->x, e.e[3]->y),
+		f(e.e[4]->x, e.e[4]->y),
+		f(e.e[5]->x, e.e[5]->y),
+
+		f(e.e[6]->x, e.e[6]->y),
+		f(e.e[7]->x, e.e[7]->y),
+		f(e.e[8]->x, e.e[8]->y);
 	return calc_local_matrix_c(e) * fv;	
 }
 
@@ -208,7 +262,7 @@ vector_t calc_global_vector(
 	result.fill(0);
 	for (auto& e : es) {
 		auto b = calc_local_vector(e);
-		for (int i = 0; i < 4; ++i) {
+		for (int i = 0; i < 9; ++i) {
 			result(e.e[i]->i) += b(i);
 		}
 	}
@@ -224,8 +278,8 @@ matrix_sparse_t calc_global_matrix(
 	matrix_sparse_ra_t result(n);
 	for (auto& e : es) {
 		auto m = calc_local_matrix(e);
-		for (int i = 0; i < 4; ++i) {
-			for (int j = 0; j < 4; ++j) {
+		for (int i = 0; i < 9; ++i) {
+			for (int j = 0; j < 9; ++j) {
 				result(e.e[i]->i, e.e[j]->i) += m(i, j);
 			}
 		}

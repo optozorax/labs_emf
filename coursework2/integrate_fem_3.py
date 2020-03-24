@@ -1,17 +1,17 @@
 from sympy import *
 import copy
 
-a, b, c = symbols("a b c")
-
-x, y = symbols("x y")
-
 def get_function(list, var, xy, h):
+	a, b, c = symbols("a b c")
+	x, y = symbols("x y")
 	a1 = solve([
 		a*xy*xy + b*xy + c - list[0], 
 		a*(xy + h/2)*(xy + h/2) + b*(xy + h/2) + c - list[1], 
 		a*(xy + h)*(xy + h) + b*(xy + h) + c - list[2]
-	], (a, b, c))
+	], [a, b, c])
 	return a1[a]*var*var + a1[b]*var + a1[c]
+
+x, y = symbols("x y")
 
 x_p, h_x = symbols("x_p h_x")
 x_p1 = x_p + h_x
@@ -26,6 +26,9 @@ X3 = get_function([0, 0, 1], x, x_p, h_x)
 Y1 = get_function([1, 0, 0], y, y_p, h_y)
 Y2 = get_function([0, 1, 0], y, y_p, h_y)
 Y3 = get_function([0, 0, 1], y, y_p, h_y)
+
+print("X1: {}\nX1: {}\nX1: {}".format(X1, X2, X3))
+print("Y1: {}\nY2: {}\nY3: {}".format(Y1, Y2, Y3))
 
 f = []
 
