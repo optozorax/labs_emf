@@ -27,8 +27,12 @@ Y1 = get_function([1, 0, 0], y, y_p, h_y)
 Y2 = get_function([0, 1, 0], y, y_p, h_y)
 Y3 = get_function([0, 0, 1], y, y_p, h_y)
 
-print("X1: {}\nX1: {}\nX1: {}".format(X1, X2, X3))
+print("X1: {}\nX2: {}\nX3: {}".format(X1, X2, X3))
 print("Y1: {}\nY2: {}\nY3: {}".format(Y1, Y2, Y3))
+
+print("latex:")
+print("X1: {}\nX2: {}\nX3: {}".format(latex(X1), latex(X2), latex(X3)))
+print("Y1: {}\nY2: {}\nY3: {}".format(latex(Y1), latex(Y2), latex(Y3)))
 
 f = []
 
