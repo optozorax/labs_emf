@@ -25,6 +25,8 @@ double elem_t::value(double x, double y, const vector_t& q) const {
 	double yp = e[0]->y;
 	double hx = get_hx();
 	double hy = get_hy();
+
+	// Вычислено в Python с помощью sympy
 	auto x1 = [&](double x) -> double { return 1.0 + 3.0*xp/hx + 2.0*(x*x)/(hx*hx) - x*(3.0*hx + 4.0*xp)/(hx*hx) + 2.0*(xp*xp)/(hx*hx); };
 	auto x2 = [&](double x) -> double { return -4.0*(x*x)/(hx*hx) + 4.0*x*(hx + 2.0*xp)/(hx*hx) - 4.0*xp*(hx + xp)/(hx*hx); };
 	auto x3 = [&](double x) -> double { return 2.0*(x*x)/(hx*hx) - x*(hx + 4.0*xp)/(hx*hx) + xp*(hx + 2.0*xp)/(hx*hx); };
@@ -70,7 +72,11 @@ double non_linear_offset(double x, double t) {
 }
 
 //-----------------------------------------------------------------------------
-grid_generator_t::grid_generator_t(double a, double b, int n, double t) : a(a), len(b-a), n1(2 * n+1.0), t(t) {}
+grid_generator_t::grid_generator_t(double a, double b, int n, double t) : 
+	a(a), 
+	len(b-a), 
+	n1(n + (1 - n % 2)), // Делаем такой костыль, чтобы количество элементов всегда было нечётное, ведь у нас биквадратичные элементы так требуют. Можно было бы умножить на 2, но это будет слишком долго работать
+	t(t) {}
 
 //-----------------------------------------------------------------------------
 double grid_generator_t::operator()(int i) const {
@@ -135,15 +141,29 @@ void grid_t::calc(const grid_generator_t& gx, const grid_generator_t& gy) {
 				i.up->up->right,
 				i.up->up->right->right,
 			});
+
+			// Говорим, что все элементы, кроме крайних трёх, заняты под конечный элемент
 			i.right->left->is_part_of_elem = true;
 			i.right->is_part_of_elem = true;
-			//i.right->right->is_part_of_elem = true;
 			i.up->is_part_of_elem = true;
 			i.up->right->is_part_of_elem = true;
 			i.up->right->right->is_part_of_elem = true;
-			//i.up->up->is_part_of_elem = true;
 			i.up->up->right->is_part_of_elem = true;
-			//i.up->up->right->right->is_part_of_elem = true;
+
+			auto make_center = [](basic_elem_t* a, basic_elem_t* b, basic_elem_t* c) {
+				b->x = (a->x + c->x)/2.0;
+				b->y = (a->y + c->y)/2.0;
+			};
+
+			// Делаем костыль, по которому неравномерная сетка внутри конечного элемента должна быть равномерной
+			// Наверное в серьёзных проектах делается так же, потому что невозможно учитывать 
+			make_center(i.right->left, i.right, i.right->right);
+			make_center(i.up, i.up->right, i.up->right->right);
+			make_center(i.up->up, i.up->up->right, i.up->up->right->right);
+			make_center(i.right->left, i.up, i.up->up);
+			make_center(i.right, i.right->up, i.right->up->up);
+			make_center(i.right->right, i.right->right->up, i.right->right->up->up);
+
 			counter++;
 		}
 	}

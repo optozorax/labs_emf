@@ -320,6 +320,7 @@ int main() {
 		u_space_mas.push_back({[] (double x, double y, double t) -> double { return exp(x*y) + exp(t*t); }, 2});
 		u_space_mas.push_back({[] (double x, double y, double t) -> double { return exp((1-x)*(1-y)) + exp((1-t)*(1-t)); }, 3});
 		u_space_mas.push_back({[] (double x, double y, double t) -> double { return x*x*x + y*y*y*y*x*x*t + t*t*exp(t); }, 4});
+		u_space_mas.push_back({ [](double x, double y, double t) -> double { return x * x * x + y * y * y + t * t; }, 0 });
 
 		for (auto& i : u_space_mas) {
 			auto& u = i.first;
