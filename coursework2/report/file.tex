@@ -23,6 +23,8 @@
 \newcommand{\mypartialpow}[3]{\frac{\partial^{#3} #1}{\partial #2^{#3}}}
 \newcommand{\myintegral}[2]{\int\limits_{#1}^{#2}}
 
+\newcommand{\scalemath}[2]{\scalebox{#1}{\mbox{\ensuremath{\displaystyle #2}}}}
+
 \begin{center}
 \hfill \break
 \Large{Министерство науки и высшего образования Российской Федерации}\\
@@ -34,7 +36,7 @@
 \hfill \break
 \large{Кафедра прикладной математики}\\
 \hfill \break
-\large{Уравнения математической физики}\\
+\large{Метод конечных элементов}\\
 \hfill \break
 \hfill \break
 \Large{\textbf{Пояснительная записка к курсовому проекту}}\\
@@ -43,7 +45,7 @@
 \normalsize{\begin{tabular}{cllp{1.5cm}p{1.5cm}}
 \multirow{5}{*}[0.75cm]{\includegraphics[scale=0.5]{fami_logo.eps}}
 & \textbf{Факультет:} & ПМИ & & \\[1.25ex]
-& \textbf{Группа:} & ПМ-63 & & \\[1.25ex]
+& \textbf{Группа:} & ПМ-61 & & \\[1.25ex]
 & \textbf{Студент:} & Шепрут И.И. & & \\[1.25ex]
 & \textbf{Преподаватель:} & Персова М.Г. & & \\[1.25ex]
 &  &  & & \\[1.25ex]
@@ -53,7 +55,7 @@
 \hfill \break
 \hfill \break
 \hfill \break
-\large{Новосибирск\\2019}
+\large{Новосибирск\\2020}
 \end{center}
 \thispagestyle{empty}
 \newpage 
@@ -61,7 +63,7 @@
 
 \section{Задание}
 
-Реализовать МКЭ для двумерной задачи для гиперболического уравнения в декартовой системе координат. Базисные функции --- билинейные. Схема Кранка-Николсона.
+Реализовать МКЭ для двумерной задачи для гиперболического уравнения в декартовой системе координат. Базисные функции --- биквадратичные. Схема Кранка-Николсона.
 
 \section{Теория}
 
@@ -79,26 +81,40 @@ $$ u|_{S} = u_s $$
 
 Формулы для билинейных базисных функций прямоугольных элементов:
 
-\begin{center}\noindent\begin{tabular}{cc}
-$\displaystyle X_1(x) = \frac{x_{p+1}-x}{h_x} $ & $\displaystyle h_x = x_{p+1}-x_p $ \\
-$\displaystyle X_2(x) = \frac{x-x_p}{h_x} $ & $\displaystyle h_y = y_{s+1}-x_s $ \\
-$\displaystyle Y_1(y) = \frac{y_{s+1}-y}{h_y} $ & $\displaystyle x \in [x_p, x_{p+1}],\, y \in [y_s, y_{s+1}] $ \\
-$\displaystyle Y_2(y) = \frac{y-y_s}{h_y} $ & $\displaystyle \Omega_{ps} = [x_p, x_{p+1}] \times [y_s, y_{s+1}] $
-\end{tabular}\end{center}
+$$ X_1(x) = 
+1 + \frac{3 x_{p}}{h_{x}} + \frac{2 x^{2}}{h_{x}^{2}} - \frac{x \left(3 h_{x} + 4 x_{p}\right)}{h_{x}^{2}} + \frac{2 x_{p}^{2}}{h_{x}^{2}}
+$$
+
+$$ X_2(x) = 
+- \frac{4 x^{2}}{h_{x}^{2}} + \frac{4 x \left(h_{x} + 2 x_{p}\right)}{h_{x}^{2}} - \frac{4 x_{p} \left(h_{x} + x_{p}\right)}{h_{x}^{2}}
+$$
+
+$$ X_3(x) = 
+\frac{2 x^{2}}{h_{x}^{2}} - \frac{x \left(h_{x} + 4 x_{p}\right)}{h_{x}^{2}} + \frac{x_{p} \left(h_{x} + 2 x_{p}\right)}{h_{x}^{2}}
+$$
+
+Формулы $Y_{1, 2, 3}(y)$ выглядят аналогично $X_{1, 2, 3}(x)$, только с заменой $x \rightarrow y$, $h_x \rightarrow h_y$.
+
+Конечный элемент для биквадратичных базисов представляется так:
 
 \begin{center}
 \begin{tikzpicture};
-	\tikzstyle{ann} = [fill=white,font=\footnotesize,inner sep=0.5pt];
+	\tikzstyle{ann} = [fill=white,font=\footnotesize,inner sep=1pt];
 	\coordinate (O) at ($ (0, 0) $);
 	\coordinate [label=right:$x$] (X) at ($ (5, 0) $);
 	\coordinate [label=right:$y$] (Y) at ($ (0, 4.5) $);
 	\coordinate (MX) at ($ (-0.5, 0) $);
 	\coordinate (MY) at ($ (0, -0.5) $);
 
-	\coordinate [label=above right:$1$] (A) at ($ (1,1) $);
-	\coordinate [label=above left:$2$] (B) at ($ (4,1) $);
-	\coordinate [label=below right:$3$] (C) at ($ (1,3.5) $);
-	\coordinate [label=below left:$4$] (D) at ($ (4,3.5) $);
+	\coordinate (A) at ($ (1,1) $);
+	\coordinate (B) at ($ (2.5,1) $);
+	\coordinate (C) at ($ (4,1) $);
+	\coordinate (D) at ($ (1,2.25) $);
+	\coordinate (E) at ($ (2.5,2.25) $);
+	\coordinate (F) at ($ (4,2.25) $);
+	\coordinate (G) at ($ (1,3.5) $);
+	\coordinate (H) at ($ (2.5,3.5) $);
+	\coordinate (I) at ($ (4,3.5) $);
 
 	\coordinate [label=below:$x_p$] (A1) at ($ (1,0) $);
 	\coordinate [label=below:$x_{p+1}$] (B1) at ($ (4,0) $);
@@ -110,33 +126,70 @@ $\displaystyle Y_2(y) = \frac{y-y_s}{h_y} $ & $\displaystyle \Omega_{ps} = [x_p,
 	\draw[->] (O) -- (X);
 	\draw[->] (O) -- (Y);
 
-	\draw[-, line width=1pt] (A) -- (B);
-	\draw[-, line width=1pt] (B) -- (D);
-	\draw[-, line width=1pt] (D) -- (C);
-	\draw[-, line width=1pt] (C) -- (A);
+	\draw[-, line width=1pt] (A) -- (C);
+	\draw[-, line width=1pt] (A) -- (G);
+	\draw[-, line width=1pt] (C) -- (I);
+	\draw[-, line width=1pt] (G) -- (I);
+	\draw[-, line width=1pt] (B) -- (H);
+	\draw[-, line width=1pt] (D) -- (F);
+	
 	\fill [black] (A) circle (1.5pt);
 	\fill [black] (B) circle (1.5pt);
 	\fill [black] (C) circle (1.5pt);
 	\fill [black] (D) circle (1.5pt);
+	\fill [black] (E) circle (1.5pt);
+	\fill [black] (F) circle (1.5pt);
+	\fill [black] (G) circle (1.5pt);
+	\fill [black] (H) circle (1.5pt);
+	\fill [black] (I) circle (1.5pt);
 	\draw[-,dashed,very thin] (A) -- (A1);
 	\draw[-,dashed,very thin] (A) -- (A2);
-	\draw[-,dashed,very thin] (B) -- (B1);
-	\draw[-,dashed,very thin] (C) -- (C1);
+	\draw[-,dashed,very thin] (C) -- (B1);
+	\draw[-,dashed,very thin] (G) -- (C1);
 
-	\node[scale=2] at (2.5, 2.25) {$\Omega$};
+	\node[right] at (5.5, 4) {$ h_x = x_{p+1}-x_p $};
+	\node[right] at (5.5, 3) {$ h_y = y_{s+1}-x_s $};
+	\node[right] at (5.5, 2) {$ x \in [x_p, x_{p+1}],\, y \in [y_s, y_{s+1}] $};
+	\node[right] at (5.5, 1) {$ \Omega_{ps} = [x_p, x_{p+1}] \times [y_s, y_{s+1}] $};
 
-	\node[right] at (5.5, 1) {$\displaystyle \psi_1(x, y) = X_1(x) Y_1(y) $};
-	\node[right] at (5.5, 2) {$\displaystyle \psi_2(x, y) = X_1(x) Y_2(y) $};
-	\node[right] at (5.5, 3) {$\displaystyle \psi_3(x, y) = X_2(x) Y_1(y) $};
-	\node[right] at (5.5, 4) {$\displaystyle \psi_4(x, y) = X_2(x) Y_2(y) $};
+	\draw[<->] ($(A)!0.5!(A1)$) -- ($(C)!0.5!(B1)$) node [midway, ann] {$h_x$};
+	\draw[<->] ($(A)!0.5!(A2)$) -- ($(G)!0.5!(C1)$) node [midway, ann] {$h_y$};
 
-	\draw[<->] ($(A)!0.5!(A1)$) -- ($(B)!0.5!(B1)$) node [midway, ann] {$h_x$};
-	\draw[<->] ($(A)!0.5!(A2)$) -- ($(C)!0.5!(C1)$) node [midway, ann] {$h_y$};
+	\draw[] ($(2.5, 2.25)$) -- ($(2.5, 2.25)$) node [midway, ann, scale=3] {$\Omega$};
+
+	\draw[] (A) -- (A) node [midway, ann] {$1$};
+	\draw[] (B) -- (B) node [midway, ann] {$2$};
+	\draw[] (C) -- (C) node [midway, ann] {$3$};
+	\draw[] (D) -- (D) node [midway, ann] {$4$};
+	\draw[] (E) -- (E) node [midway, ann] {$5$};
+	\draw[] (F) -- (F) node [midway, ann] {$6$};
+	\draw[] (G) -- (G) node [midway, ann] {$7$};
+	\draw[] (H) -- (H) node [midway, ann] {$8$};
+	\draw[] (I) -- (I) node [midway, ann] {$9$};
+
 \end{tikzpicture}
 \end{center}
 
+Значения функций в узлах:
+
+\begin{center}
+\begin{tabular}{ccc}
+$\displaystyle \psi_1(x, y) = X_1(x) Y_1(y) $ &
+$\displaystyle \psi_2(x, y) = X_2(x) Y_1(y) $ &
+$\displaystyle \psi_3(x, y) = X_3(x) Y_1(y) $ \\
+
+$\displaystyle \psi_4(x, y) = X_1(x) Y_2(y) $ &
+$\displaystyle \psi_5(x, y) = X_2(x) Y_2(y) $ &
+$\displaystyle \psi_6(x, y) = X_3(x) Y_2(y) $ \\
+
+$\displaystyle \psi_7(x, y) = X_1(x) Y_3(y) $ &
+$\displaystyle \psi_8(x, y) = X_2(x) Y_3(y) $ &
+$\displaystyle \psi_9(x, y) = X_3(x) Y_3(y) $
+\end{tabular}
+\end{center}
+
 И значение конечно-элементной аппроксимации на этом конечном элементе равно:
-$$ u^{*}_{ps}(x, y) = \sum_{i=1}^4 q_i \psi_i(x, y)  $$
+$$ u^{*}_{ps}(x, y) = \sum_{i=1}^9 q_i \psi_i(x, y)  $$
 
 Аналитические выражения для вычисления элементов локальных матриц:
 
@@ -147,27 +200,14 @@ $\displaystyle M_{ij}^\gamma = \myintegral{x_p}{x_{p+1}}\myintegral{y_s}{y_{s+1}
 \end{center}
 
 Вычисленные матрицы для билинейных прямоугольных элементов:
-
-$$ \mb{G} = \frac{\bar{\lambda}}{6}\frac{h_y}{h_x}\begin{pmatrix}
-2 & -2 & 1 & -1 \\
--2 & 2 & -1 & 1 \\
-1 & -1 & 2 & -2 \\
--1 & 1 & -2 & 2
-\end{pmatrix} + \frac{\bar{\lambda}}{6}\frac{h_x}{h_y}\begin{pmatrix}
-2 & 1 & -2 & -1 \\
-1 & 2 & -1 & -2 \\
--2 & -1 & 2 & 1 \\
--1 & -2 & 1 & 2
-\end{pmatrix} $$
+\setlength{\arraycolsep}{2.5pt} % default: 5pt
+\medmuskip = 1mu
+$$ \mb{G} = \frac{\lambda}{90}\frac{h_{x}}{h_{y}}\cdot\scalemath{0.5}{\left[\begin{matrix}28 & 14 & -7 & -32 & -16 & 8 & 4 & 2 & -1\\14 & 112 & 14 & -16 & -128 & -16 & 2 & 16 & 2\\-7 & 14 & 28 & 8 & -16 & -32 & -1 & 2 & 4\\-32 & -16 & 8 & 64 & 32 & -16 & -32 & -16 & 8\\-16 & -128 & -16 & 32 & 256 & 32 & -16 & -128 & -16\\8 & -16 & -32 & -16 & 32 & 64 & 8 & -16 & -32\\4 & 2 & -1 & -32 & -16 & 8 & 28 & 14 & -7\\2 & 16 & 2 & -16 & -128 & -16 & 14 & 112 & 14\\-1 & 2 & 4 & 8 & -16 & -32 & -7 & 14 & 28\end{matrix}\right]} + \frac{\lambda}{90}\frac{h_{y}}{h_{x}}\cdot\scalemath{0.5}{\left[\begin{matrix}28 & -32 & 4 & 14 & -16 & 2 & -7 & 8 & -1\\-32 & 64 & -32 & -16 & 32 & -16 & 8 & -16 & 8\\4 & -32 & 28 & 2 & -16 & 14 & -1 & 8 & -7\\14 & -16 & 2 & 112 & -128 & 16 & 14 & -16 & 2\\-16 & 32 & -16 & -128 & 256 & -128 & -16 & 32 & -16\\2 & -16 & 14 & 16 & -128 & 112 & 2 & -16 & 14\\-7 & 8 & -1 & 14 & -16 & 2 & 28 & -32 & 4\\8 & -16 & 8 & -16 & 32 & -16 & -32 & 64 & -32\\-1 & 8 & -7 & 2 & -16 & 14 & 4 & -32 & 28\end{matrix}\right]}
+$$
 
 \begin{center}
 \begin{tabular}{cc}
-\multirow{3}{*}{$\displaystyle \mb{C} = \frac{h_x h_y}{36}\begin{pmatrix}
-4 & 2 & 2 & 1 \\
-2 & 4 & 1 & 2 \\
-2 & 1 & 4 & 2 \\
-1 & 2 & 2 & 4
-\end{pmatrix} $} & $ \mb{M}^\gamma = \bar{\gamma}\mb{C} $ \\[1.25ex]
+\multirow{3}{*}{$\displaystyle \mb{C} = \gamma \frac{h_{x} h_{y}}{900}\cdot\scalemath{0.5}{\left[\begin{matrix}16 & 8 & -4 & 8 & 4 & -2 & -4 & -2 & 1\\8 & 64 & 8 & 4 & 32 & 4 & -2 & -16 & -2\\-4 & 8 & 16 & -2 & 4 & 8 & 1 & -2 & -4\\8 & 4 & -2 & 64 & 32 & -16 & 8 & 4 & -2\\4 & 32 & 4 & 32 & 256 & 32 & 4 & 32 & 4\\-2 & 4 & 8 & -16 & 32 & 64 & -2 & 4 & 8\\-4 & -2 & 1 & 8 & 4 & -2 & 16 & 8 & -4\\-2 & -16 & -2 & 4 & 32 & 4 & 8 & 64 & 8\\1 & -2 & -4 & -2 & 4 & 8 & -4 & 8 & 16\end{matrix}\right]} $} & $ \mb{M}^\gamma = \bar{\gamma}\mb{C} $ \\[1.25ex]
 & $ \mb{f} = \roubr{f_1, f_2, f_3, f_4}^t $ \\[1.25ex]
 & $ \mb{b} = \mb{C}\cdot \mb{f} $
 \end{tabular}
@@ -243,12 +283,12 @@ $$ \roubr{\frac{\mb{G}}{2} + \mb{C}\roubr{\frac{\gamma}{2} + \frac{\sigma}{d_1} 
 class grid_generator_t
 {
 public:
-	grid_generator_t(double a, double b, int n, double t = 0);
-	double operator()(int i) const;
-	int size(void) const;
-	double back(void) const;
+    grid_generator_t(double a, double b, int n, double t = 0);
+    double operator()(int i) const;
+    int size(void) const;
+    double back(void) const;
 private:
-	double a, len, t, n1;
+    double a, len, t, n1;
 };
 \end{minted}
 \end{tcolorbox} 
@@ -282,14 +322,14 @@ private:
 ]{c++}
 struct basic_elem_t
 {
-	int i; /// Номер узла
+    int i; /// Номер узла
 
-	double x, y; /// Координаты узла
+    double x, y; /// Координаты узла
 
-	basic_elem_t *up, *down, *left, *right; /// Указатели на соседей узла
+    basic_elem_t *up, *down, *left, *right; /// Указатели на соседей узла
 
-	/** Проверяет, является ли элемент граничным. Он таким явлется, если у него нет хотя бы одного соседа. */
-	bool is_boundary(void) const;
+    /** Проверяет, является ли элемент граничным. Он таким явлется, если у него нет хотя бы одного соседа. */
+    bool is_boundary(void) const;
 };
 \end{minted}
 \end{tcolorbox} 
@@ -323,22 +363,26 @@ struct basic_elem_t
 ]{c++}
 struct elem_t
 {
-	int i; /// Номер конечного элемента
-	basic_elem_t* e[4]; /// Указатели на все 4 элемента конечного узла, нумерация такая:
-	/** 
-		 Y
-		 ^  3 +-----+ 4
-		 |    |     |
-		 |  1 +-----+ 2
-		-+--------------> X
-		 |
-	 */
+    int i; /// Номер конечного элемента
+    basic_elem_t* e[9]; /// Указатели на все 9 элементов конечного узла, нумерация такая:
+    /** 
+         Y
+         ^
+         |  7-----8-----9
+         |  |     |     |
+         |  4-----5-----6
+         |  |     |     |
+         |  1-----2-----3
+         |
+        -+---------------> X
+         |
+     */
 
-	double get_hx(void) const; /// Ширина конечного элемента
-	double get_hy(void) const; /// Высота конечного элемента
+    double get_hx(void) const; /// Ширина конечного элемента
+    double get_hy(void) const; /// Высота конечного элемента
 
-	/** Рассчитать значение внутри конечного элемента. q - вектор рассчитыванных весов. */
-	double value(double x, double y, const vector_t& q) const;
+    /** Рассчитать значение внутри конечного элемента. q - вектор рассчитыванных весов. */
+    double value(double x, double y, const vector_t& q) const;
 };
 \end{minted}
 \end{tcolorbox} 
@@ -373,12 +417,12 @@ struct elem_t
 class grid_t
 {
 public:
-	vector<elem_t> es; /// Массив конечных элементов сетки
-	vector<basic_elem_t> bes; /// Массив узлов сетки
-	int n; /// Число узлов
+    vector<elem_t> es; /// Массив конечных элементов сетки
+    vector<basic_elem_t> bes; /// Массив узлов сетки
+    int n; /// Число узлов
 
-	/** Рассчитать неравномерную сетку. */
-	void calc(const grid_generator_t& gx, const grid_generator_t& gy);
+    /** Рассчитать неравномерную сетку. */
+    void calc(const grid_generator_t& gx, const grid_generator_t& gy);
 };
 \end{minted}
 \end{tcolorbox} 
@@ -415,20 +459,20 @@ public:
 class matrix_sparse_ra_t
 {
 public:
-	matrix_sparse_ra_t(int n);
+    matrix_sparse_ra_t(int n);
 
-	/** Установить значение в позиции (i, j) */
-	double& operator()(int i, int j);
+    /** Установить значение в позиции (i, j) */
+    double& operator()(int i, int j);
 
-	/** Получить значение в позиции (i, j). Если туда ещё не устанавливалось значение, вызывается исключение. */
-	const double& operator()(int i, int j) const;
+    /** Получить значение в позиции (i, j). Если туда ещё не устанавливалось значение, вызывается исключение. */
+    const double& operator()(int i, int j) const;
 
-	/** Преобразует текущую матрицу к разреженной матрице. */
-	matrix_sparse_t to_sparse(void) const;
+    /** Преобразует текущую матрицу к разреженной матрице. */
+    matrix_sparse_t to_sparse(void) const;
 private:
-	int n;
-	vector<double> dm;
-	vector<map<int, double>> lm, um;
+    int n;
+    vector<double> dm;
+    vector<map<int, double>> lm, um;
 };
 \end{minted}
 \end{tcolorbox} 
@@ -480,11 +524,11 @@ private:
 
 \mytable{functions_table_10_10_10}
 
-\conclusion полностью (на всей области конечных элементов, а не только в узлах) аппроксимируются только линейные функции по пространству и для степени $t$ равной 0, 1 или 2.
+\conclusion полностью (на всей области конечных элементов, а не только в узлах) аппроксимируются линейные и \textbf{квадратичные} функции по пространству и для степени $t$ равной 0, 1 или 2.
 
-\conclusion значения в узлах полностью аппроксимируются только до полиномов 3 степени включительно по пространству.
+\conclusion значения в узлах полностью аппроксимируются по пространству только до полиномов 3 степени включительно.
 
-\conclusion порядок аппроксимации по пространству --- $3$, порядок аппроксимации по времени --- $2$.
+\conclusion порядок аппроксимации по пространству --- $4$, порядок аппроксимации по времени --- $2$.
 
 \conclusion все функции считаются примерно за одинаковое время.
 
@@ -496,9 +540,13 @@ private:
 
 \conclusion предыдущие выводы не опровеглись.
 
-\conclusion время вычислений выросло примерно в 110 раз.
+\conclusion время вычислений выросло примерно в 86 раз.
 
 \subsection{Неравномерные сетки}
+
+\subsubsection{Неравномерная сетка для биквадратичных элементов}
+
+Формулы для биквадратичных элементов и матрицы $G$, $C$ вычислены с предположением о том, что узлы конечного элемента располагаются по равномерной сетке. Вычислять это же для неравномерной сетки очень сложно, и формулы будут очень большие. Поэтому было принято решение делать неравномерную сетку по размеру конечных элементов, а внутри них оставлять всё равномерным. Конечно, такой подход, может не идеально аппроксимировать неравномерные сетки, и результаты могут сильно отличаться от неравномерных сеток на билинейных элементах.
 
 \subsubsection{Функции нелинейной сетки}
 
@@ -533,36 +581,41 @@ $$ u = x^2 + y^2 + t^2 $$
 
 \includetwoimages{space_tgrid_0}
 
-\conclusion так как эта функция полностью аппроксимируется данным методом в узлах, то не имеет значения насколько сетка неравномерна, примерно во всех элементах она имеет одинаковую невязку, согласно левому графику. Разве что в сильно неравномерных сетках, где элементы сильно сгущены к одному из концов, точностью страдает на несколько порядков.
+\conclusion так как эта функция полностью аппроксимируется данным методом в узлах, то не имеет значения насколько сетка неравномерна, примерно во всех элементах она имеет одинаковую невязку, согласно левому графику.
 
-\conclusion а по интегральной норме лучшей сеткой является раномерная сетка согласно правому графику.
+\conclusion по интегральной норме тоже можно видеть, что независимо от неравномерности сетки, функция аппроксимируется идеально, потому что функция и конечные элементы --- квадратичные функции.
+
+\myparagraph{Функция 5}
+$$ u = x^3 + y^3 + t^2 $$
+
+\includetwoimages{space_tgrid_5}
+
+\conclusion аналогично эта функция полностью аппроксимируется в узлах.
+
+\conclusion а согласно интегральной норме, эта функция плохо аппроксимируется полностью, это понятно, ведь функция кубическая, а конечные элементы квадратичные.
 
 \myparagraph{Функция 2}
 $$ u = x^4 + y^3x + t^4 $$
 
 \includetwoimages{space_tgrid_1}
 
-\conclusion согласно левому графику норма в узлах лучше всего аппроксимируется при сгущении по $y$ в одну или другую сторону. По $x$ же неравномерность сетки практически ни на что не влияет.
+\conclusion имеются некоторые участки, где неравномерность сетки помогает лучше всего аппроксимировать эту функцию, но разность в точности лишь в 5 раз.
 
-\conclusion лучшая точность, даваемая неравномерной сетки примерно на полпорядка лучше, чем при равномерной.
-
-\conclusion по интегральной же норме существует некоторая комбинация параметров, при которых сетка получается оптимальной. Но различия от неравномерной сетки ничтожны.
+\conclusion по интегральной же норме существует некоторая комбинация параметров, при которых сетка получается оптимальной, но опять же эта точность между худшей и лучшей точкой различаются тоже в 5 раз.
 
 \myparagraph{Функция 3}
 $$ u = e^{xy} + e^{t^2} $$
 
 \includetwoimages{space_tgrid_2}
 
-\conclusion согласно левому графику аппроксимация в узлах тоже имеет некоторые оптимальлные значения, причем точность увеличивается на порядок.
-
-\conclusion для интегральной же нормы различия же от равномерной сетки ничтожны при любых параметрах сетки.
+\conclusion разница между лучшей и худшей неравномерностью сетки по узлам и интегральной норме различаются в 2 и 3 раза соответственно. То есть неравномерную сетку можно использовать, но только если знать куда сгущать, и результаты будут лишь в 2-3 раза лучше равномерной сетки.
 
 \myparagraph{Функция 4}
 $$ u = e^{(1-x)(1-y)} + e^{(1-t)^2} $$
 
 \includetwoimages{space_tgrid_3}
 
-\conclusion эта функция отличается от предыдущей, что для неё инвертировано положение $x$ и $y$, график по интегральной норме соответственно изменился.
+\conclusion здесь имеются явно выраженные и монотонные участки с оптимальной сеткой, но разница между равномерной сеткой и лучшей неравномерной лишь в 2 раза.
 
 \myparagraph{Функция 5}
 $$ u = x^3 + y^4 x^2 t + t^2 e^t $$
@@ -575,9 +628,7 @@ $$ u = x^3 + y^4 x^2 t + t^2 e^t $$
 
 \conclusion хорошая аппроксимация в узлах $\neq$ хорошая аппроксимация по интегральной норме.
 
-\conclusion согласно интегральной норме для неполиномиальных функций существует некоторый набор параметров $t_x$ и $t_y$, при которых нелинейная сетка оптимальным образом аппроксимирует функцию.
-
-\conclusion согласно норме в узлах для неполиномиальных функций оптимальными являются параметры в окрестности $\pm 1$.
+\conclusion неравномерную сетку можно использовать, но выигрыш от её использования от силы в 2-3 раза по точности в отличии от равномерной сетки.
 
 \subsubsection{По времени}
 
@@ -605,7 +656,8 @@ $$ u = x^2 + y^2 + t^2 $$
 
 \includetwographs{time_tgrid_0}
 
-\conclusion так как по времени эта функция аппроксимируется точно, то неравномерность сетки никак не влияет на точность. Правый график колеблется в пределах максимальной точности, левый же абсолютно не меняется.
+\conclusion так как по времени эта функция аппроксимируется точно, то неравномерность сетки никак не влияет на точность. Оба графика колеблются в пределах максимальной точности.
+
 
 \myparagraph{Функция 2}
 $$ u = x^4 + y^3x + t^4 $$
@@ -626,7 +678,7 @@ $$ u = e^{(1-x)(1-y)} + e^{(1-t)^2} $$
 
 \includetwographs{time_tgrid_3}
 
-\conclusion эта функция является перевернутой версией предыдущей, но график аналогчно не переверлся, а наблюдается более сложная зависимость. Для данной функции неравномерная сетка по времени практичеки везде дает отрицательный эффект по сравнению с равномерной сеткой.
+\conclusion эта функция является перевернутой версией предыдущей, но график аналогчно не перевернулся, а наблюдается более сложная зависимость. Для данной функции неравномерная сетка по времени практичеки везде дает отрицательный эффект по сравнению с равномерной сеткой.
 
 \myparagraph{Функция 5}
 $$ u = x^3 + y^4 x^2 t + t^2 e^t $$
@@ -649,12 +701,12 @@ $$ u(x, y, t) = e^{xy} + e^{t^2} $$
 \noindent\begin{tikzpicture}
 \begin{semilogyaxis}[xlabel=Число узлов,ylabel=Интегральная разность,width=\textwidth, height=6cm]
 \addplot[black, no markers] table [y=integral, x=i]{space_sgrid.txt};
-\addplot[black, dashed, smooth, domain=49:5776] {529^(0.75)*x^(-0.75)*0.000190175};
+\addplot[black, dashed, smooth, domain=49:5776] {529^(0.75)*x^(-0.75)*0.0000190175};
 \legend{Точность решения,$c\cdot x^{-0.75}$,}
 \end{semilogyaxis}
 \end{tikzpicture}
 
-\conclusion согласно интегральной норме, порядок сходимости $\approx 0.75$.
+\conclusion странный график. Почему-то у нас совершенно перестала падать интегральная норма при увеличении числа узлов. Наверное что-то в биквадратичных элементах реализовано неправильно, ведь здесь же билинейные элементы вели себя как пунктирный график. Хотя не понятно, где именно может быть ошибка, если учитывать логичность предыдущих результатов.
 
 \noindent\begin{tikzpicture}
 \begin{semilogyaxis}[xlabel=Число узлов,ylabel=Норма разности векторов,width=\textwidth, height=6cm]
@@ -664,16 +716,15 @@ $$ u(x, y, t) = e^{xy} + e^{t^2} $$
 \end{semilogyaxis}
 \end{tikzpicture}
 
-\conclusion согласно норме разности векторов, порядок сходимости $\approx 0.45$.
+\conclusion согласно норме разности векторов, порядок сходимости $\approx 0.45$. Абсолютно такой же был порядок сходимости для билинейных элементов. Особенность в том, что для биквадратичных элементов требуется в 2 раза больше узлов. Но так как мы здесь сравниваем по узлам, то получается, что 
 
 \noindent\begin{tikzpicture}
 \begin{axis}[xlabel=Число узлов,ylabel=Время решения мкс,width=\textwidth, height=6cm]
 \addplot[black, no markers] table [y=time, x=i]{space_sgrid.txt};
-\addplot[black, dashed, smooth, domain=49:5776] {x/5776*4.89955*10^7};
 \end{axis}
 \end{tikzpicture}
 
-\conclusion время решения почти линейно зависит от числа узлов (с учетом погрешности, вносимой многопоточностью).
+\conclusion время решения линейно зависит от числа узлов.
 
 \subsubsection{Увеличение размерности по времени}
 
@@ -687,7 +738,7 @@ $$ u(x, y, t) = e^{xy} + e^{t^2} $$
 \end{semilogyaxis}
 \end{tikzpicture}
 
-\conclusion при увеличении числа итераций по времени, увеличивается интегральная норма, но потом она достигает предельного значения и далее не увеличивается, потому что количество элементов сетки неизменно, и они не способны точно аппроксимировать данную функцию, поскольку она непредставима в линейных элементах.
+\conclusion при увеличении числа итераций по времени, увеличивается точность интегральной нормы. Ожидалось, что потом она достигает предельного значения и далее не увеличивается, потому что количество элементов сетки неизменно, и они не способны точно аппроксимировать данную функцию, но она не останавливается. Возможно это и есть причина того что \textit{странный график} из предыдущего пункта был таким, возможно ему просто не хватило итераций по времени, и он не мог далее аппроксимировать. Если это так, то для биквадратичных элементов \textbf{требуется больше итераций по времени} для достижения достаточной точности по интегральной норме.
 
 \noindent\begin{tikzpicture}
 \begin{semilogyaxis}[xlabel=Число временных итераций,ylabel=Норма разности векторов,width=\textwidth, height=6cm]
@@ -702,13 +753,26 @@ $$ u(x, y, t) = e^{xy} + e^{t^2} $$
 \noindent\begin{tikzpicture}
 \begin{axis}[xlabel=Число временных итераций,ylabel=Время решения мкс,width=\textwidth, height=6cm]
 \addplot[black, no markers] table [y=time, x=i]{time_sgrid.txt};
-\addplot[black, dashed, smooth, domain=3:501] {x/501*6*10^6};
 \end{axis}
 \end{tikzpicture}
 
-\conclusion время решения почти линейно зависит от числа итераций по времени (с учетом погрешности, вносимой многопоточностью).
+\conclusion время решения линейно зависит от числа итераций по времени.
 
 \section{Код}
+
+\subsection{Аналитический расчёт формул}
+
+Для расчётов формул была использована библиотека \texttt{sympy} на \texttt{Python}, благодаря ей были вычислены матрицы $G$, $C$ размера $9\times 9$; и билинейные базисные функции. 
+
+В следующем файле с вычисляются эти функции и матрицы для билинейных базисов:
+
+\mycodeinput{python}{../integrate_fem_2.py}{integrate\_fem\_2.py}
+
+А здесь вычисляются для биквадратичных базисов:
+
+\mycodeinput{python}{../integrate_fem_3.py}{integrate\_fem\_3.py}
+
+Программу вполне можно обобщить для любых би-$n$-базисов.
 
 \subsection{Файлы заголовков}
 
